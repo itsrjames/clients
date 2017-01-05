@@ -1,0 +1,144 @@
+<process name="SFG_SCT_ICFThread">
+  <rule name="MoreMessages">
+    <condition>number(SFG_SCT_ICFFile/MessagesIdentified)&gt;0</condition>
+  </rule>
+
+  <sequence name="Main">
+    <operation name="BP Metadata: get WFID">
+      <participant name="FB_BPMETADATA"/>
+      <output message="BPMetaDataServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="SFG_SCT_ICFThread/WFID" from="string(BPDATA/WORKFLOW_ID)"></assign>
+      </input>
+    </operation>
+
+    <sequence name="BundleThread">
+	  <!-- CHG_CR003_OB_IBM_RJ_221112_00001_SFG_SCT_ICFThread_00001
+		  Old
+          <assign to="sql">SELECT MESSAGE_ID FROM ( SELECT s.MESSAGE_ID, s.SETTLE_DATE FROM SCT_PAYMENT s WHERE s.BUNDLE_ID=? AND GROUP1=? ORDER BY SETTLE_DATE ASC )</assign>
+		  New
+          <assign to="sql">SELECT MESSAGE_ID FROM ( SELECT s.DOC_ID, s.SETTLE_DATE FROM SCT_PAYMENT s WHERE s.BUNDLE_ID=? AND GROUP1=? ORDER BY SETTLE_DATE ASC )</assign>
+	  -->		  		  		  		  
+      <operation name="LWJDBC: Select Messages to Bundle">
+        <participant name="FB_LWJDBC"/>
+        <output message="LightweightJDBCAdapterTypeInputMessage">
+          <assign to="param1" from="number(SFG_SCT_ICFThread/BundleID)"></assign>
+          <assign to="param2" from="string(SFG_SCT_ICFThread/ThreadID)"></assign>
+          <assign to="paramtype1">Integer</assign>
+          <assign to="paramtype2">String</assign>
+          <assign to="sql">SELECT DOC_ID FROM ( SELECT s.DOC_ID, s.SETTLE_DATE FROM SCT_PAYMENT s WHERE s.BUNDLE_ID=? AND GROUP1=? ORDER BY SETTLE_DATE ASC )</assign>
+          <assign to="." from="*"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="MessagesToTransmit" from="DocToDOM(PrimaryDocument)//row/*"></assign>
+        </input>
+      </operation>
+
+      <operation name="SCTBundle: Bundle Payments">
+        <participant name="SFG_SCT_BUNDLE_SG"/>
+        <output message="SCTBundleInputMessage">
+          <assign to="XattributesX">xmlns:Document=&quot;urn:Document:xsd:$SCTIcfBlkCredTrf&quot; xmlns:sw7=&quot;urn:iso:std:iso:20022:tech:xsd:pacs.004.001.01&quot; xmlns:sw6=&quot;urn:iso:std:iso:20022:tech:xsd:pacs.006.001.01&quot; xmlns:sw8=&quot;urn:iso:std:iso:20022:tech:xsd:pacs.008.001.01&quot; xmlns:pacs008=&quot;urn:iso:std:iso:20022:tech:xsd:pacs.008.001.02&quot; xmlns:pacs004=&quot;urn:iso:std:iso:20022:tech:xsd:pacs.004.001.02&quot; xmlns:camt029=&quot;urn:iso:std:iso:20022:tech:xsd:camt.029.001.03&quot; xmlns:camt056=&quot;urn:iso:std:iso:20022:tech:xsd:camt.056.001.01&quot;</assign>
+          <assign to="XrootX">Document</assign>
+          <assign to="." from="*"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="SFG_SCT_ICFThread/BundleDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+        </input>
+      </operation>
+
+      <operation name="Get Doc Info: Get Doc ID">
+        <participant name="FB_GETDOCINFO"/>
+        <output message="GetDocumentInfoServiceTypeInputMessage">
+          <assign to="PrimaryDocument" from="SFG_SCT_ICFThread/BundleDocument/@SCIObjectID"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="SFG_SCT_ICFThread/DocID" from="string(DocumentId)"></assign>
+        </input>
+      </operation>
+
+      <operation name="LWJDBC: Update Payment with Bundle Doc ID">
+        <participant name="FB_LWJDBC"/>
+        <output message="LightweightJDBCAdapterTypeInputMessage">
+          <assign to="param1" from="string(SFG_SCT_ICFThread/DocID)"></assign>
+          <assign to="param2" from="string(SFG_SCT_ICFThread/ThreadID)"></assign>
+          <assign to="param3" from="number(SFG_SCT_ICFThread/BundleID)"></assign>
+          <assign to="paramtype1">String</assign>
+          <assign to="paramtype2">String</assign>
+          <assign to="paramtype3">Integer</assign>
+          <assign to="query_type">UPDATE</assign>
+          <assign to="sql">UPDATE SCT_PAYMENT  SET GROUP2=? WHERE GROUP1=? AND BUNDLE_ID=?</assign>
+          <assign to="." from="*"></assign>
+        </output>
+        <input message="inmsg">
+        </input>
+      </operation>
+
+      <operation name="LWJDBC: UpdateThread">
+        <participant name="FB_LWJDBC"/>
+        <output message="LightweightJDBCAdapterTypeInputMessage">
+          <assign to="param1">1</assign>
+          <assign to="param2" from="number(SFG_SCT_ICFThread/WFID)"></assign>
+          <assign to="param3" from="string(SFG_SCT_ICFThread/ThreadID)"></assign>
+          <assign to="paramtype1">Integer</assign>
+          <assign to="paramtype2">Integer</assign>
+          <assign to="paramtype3">String</assign>
+          <assign to="query_type">UPDATE</assign>
+          <assign to="sql">UPDATE FB_WF_THREAD SET STATUS=?, THREAD_WFID=?, LAST_MODIFIED=sysdate WHERE WF_THREAD_ID=?</assign>
+          <assign to="." from="*"></assign>
+        </output>
+        <input message="inmsg">
+        </input>
+      </operation>
+
+      <onFault>
+        <sequence name="SCT15">
+          <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT15</assign>
+          <operation name="Invoke Throw Error">
+            <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+            <output message="InlineInvokeBPTypeInputMessage">
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <onFault>
+      <sequence name="Handle Error">
+        <operation name="LWJDBC: Update Thread">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1">-1</assign>
+            <assign to="param2" from="number(SFG_SCT_ICFThread/WFID)"></assign>
+            <assign to="param3" from="string(SFG_SCT_ICFThread/ThreadID)"></assign>
+            <assign to="paramtype1">Integer</assign>
+            <assign to="paramtype2">Integer</assign>
+            <assign to="paramtype3">String</assign>
+            <assign to="query_type">UPDATE</assign>
+            <assign to="sql">UPDATE FB_WF_THREAD SET STATUS=?, THREAD_WFID=?, LAST_MODIFIED=sysdate WHERE WF_THREAD_ID=?</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <operation name="Release Service">
+          <participant name="FB_RELEASE"/>
+          <output message="ReleaseServiceTypeInputMessage">
+            <assign to="TARGET">SFG_SCT_ICFThread</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

@@ -1,0 +1,112 @@
+<process name="FB_GPL_MQCheck_SFG">
+  <rule name="NodesLeft">
+    <condition>number(LoopCounter)&lt;=count(Nodes/Node)</condition>
+  </rule>
+
+<rule name="MQError">
+    <condition>number(FB_MQVerifyQueue/MQRetried)=1 and number(FB_MQVerifyQueue/IsError)=1</condition>
+  </rule>
+  
+  <rule name="MQRetry">
+    <condition>number(FB_MQVerifyQueue/MQRetried)!=1 and number(FB_MQVerifyQueue/IsError)=1</condition>
+  </rule>
+
+  <sequence name="GPL_MQCheck">
+    <operation name="ClusterUtils">
+      <participant name="FB_CLUSTERUTILS"/>
+      <output message="ClusterUtilsInputMessage">
+        <assign to="Action">ListNodes</assign>
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="LoopCounter" from="number(1)"></assign>
+        <assign to="Nodes" from="Nodes/*"></assign>
+      </input>
+    </operation>
+
+    <sequence name="LoopStart">
+      <choice name="NodesLeft?">
+        <select>
+          <case ref="NodesLeft" activity="Check Meta Queue from node"/>
+        </select>
+
+        <sequence name="Check Meta Queue from node">
+          <assign name="Assign" to="FB_MQVerifyQueue/Servicename" from="concat(&apos;FB_GPL_WMQ_SFG_FB_Meta_Rcv_Node&apos;, substring-after(Nodes/Node[number(//LoopCounter)], &apos;node&apos;))"></assign>
+          <assign name="Assign" to="FB_MQVerifyQueue/Node" from="string(Nodes/Node[number(//LoopCounter)])"></assign>
+          <operation name="Invoke FB_MQVerifyQueue">
+            <participant name="FB_INVOKE_SUBPROCESS"/>
+            <output message="InvokeSubProcessServiceTypeInputMessage">
+              <assign to="INVOKE_MODE">INLINE</assign>
+              <assign to="WFD_NAME">FB_MQVerifyQueue</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+           <choice name="MQError">
+            <select>
+              <case ref="MQError" activity="FBK050"/>
+              <case ref="MQRetry" activity="MQRetry"/>
+            </select>
+
+            <sequence name="FBK050">
+              <operation name="FileBrokerEvent">
+          			<participant name="FB_FILEBROKER_EVENT"/>
+          			<output message="FileBrokerEventInputMessage">
+            			<assign to="." from="*"></assign>
+            			<assign to="EventCode">FBK050</assign>
+          			</output>
+          			<input message="inmsg">
+            			<assign to="." from="*"></assign>
+          			</input>
+        			</operation>
+            </sequence>
+            <sequence name="MQRetry">
+            	<operation name="Wait">
+                <participant name="WaitService"/>
+                <output message="WaitServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="WAIT_INTERVAL">1</assign>
+                  <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+              <operation name="Release Service">
+            <participant name="FB_RELEASE"/>
+            <output message="ReleaseServiceTypeInputMessage">
+              <assign to="TARGET">FB_MQVerifyQueue/IsError</assign>
+              <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+              <assign name="Assign" to="FB_MQVerifyQueue/MQRetried">1</assign>
+              <repeat name="return to Check MQ" ref="Check Meta Queue from node"/>
+            </sequence>
+          </choice>
+          <operation name="Release Service">
+            <participant name="FB_RELEASE"/>
+            <output message="ReleaseServiceTypeInputMessage">
+              <assign to="TARGET">FB_MQVerifyQueue</assign>
+              <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <assign name="Assign" to="LoopCounter" from="number(LoopCounter)+1"></assign>
+          <repeat name="return to LoopStart" ref="LoopStart"/>
+
+        </sequence>
+      </choice>
+    </sequence>
+  </sequence>
+</process>

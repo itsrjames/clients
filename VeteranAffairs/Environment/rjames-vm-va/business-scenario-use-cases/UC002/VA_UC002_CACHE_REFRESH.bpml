@@ -1,0 +1,40 @@
+<process name="VA_UC002_CACHE_REFRESH">
+<!-- 
+Customer	:	Veterans Affairs
+Asset   	:	VA_UC002_CACHE_REFRESH
+Type		:	Business Process
+Developer	:	Robert James rjames@comresource.com
+Use Case	:	UC002
+Function	:	BP Will refresh the ISBI cache when property file
+				vauc002.properties is updated
+				fbcdwto.properties is updated
+
+ -->
+	<sequence name="MainSequence">
+		<operation name="Cache Refresh [sfg]">
+		  <participant name="VA_CACHE_REFRESH"/>
+		  <output message="CacheRefreshServiceTypeInputMessage">
+		    <assign to="cache_name">vauc002</assign>
+		    <assign to="cache_type">properties</assign>
+		    <assign to="." from="*"></assign>
+		  </output>
+		  <input message="inmsg">
+		    <assign to="." from="*"></assign>
+		  </input>
+		</operation>
+		<operation name="Cache Refresh [sfg]">
+		  <participant name="VA_CACHE_REFRESH"/>
+		  <output message="CacheRefreshServiceTypeInputMessage">
+		    <assign to="cache_name">fbcdwto</assign>
+		    <assign to="cache_type">properties</assign>
+		    <assign to="." from="*"></assign>
+		  </output>
+		  <input message="inmsg">
+		    <assign to="." from="*"></assign>
+		  </input>
+		</operation>			
+	<onFault>
+		<assign to="DoSomething">OnFault</assign>
+	</onFault>
+	</sequence>
+</process>

@@ -1,0 +1,148 @@
+<process name="FB_Async_CD_Handler">
+  <rule name="FilesToProcess">
+    <condition>number(FB_Async_CD/FileCount)&gt;0 and number(FB_Async_CD/LoopCounter)&lt;=number(FB_Async_CD/Sessions)</condition>
+  </rule>
+
+  <sequence name="Async CD Handler">
+    <operation name="Lock">
+      <participant name="FB_LOCK"/>
+      <output message="LockServiceTypeInputMessage">
+        <assign to="ACTION">LOCK</assign>
+        <assign to="CLEAR_ON_START_UP">TRUE</assign>
+        <assign to="DURATION" from="sci-get-property(&apos;fbasynccd&apos;, &apos;handler.lock.duration&apos;)"></assign>
+        <assign to="LOCK_KEY" from="concat(&apos;FB_Async_CD_Handler_&apos;, FB_Async_CD/Snode)"></assign>
+        <assign to="USER">FBSystem</assign>
+      </output>
+      <input message="inmsg">
+      </input>
+    </operation>
+
+    <sequence name="CD Handler">
+      <sequence name="Lock Seq">
+        <operation name="JDBC: Get count from FB_ASYNC_CD">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1">0</assign>
+            <assign to="param2">0</assign>
+            <assign to="param3" from="string(FB_Async_CD/Snode)"></assign>
+            <assign to="paramtype1">Integer</assign>
+            <assign to="paramtype2">Integer</assign>
+            <assign to="paramtype3">String</assign>
+            <assign to="sql">SELECT COUNT(ASYNC_CD_ID) AS CDCOUNT FROM FB_ASYNC_CD WHERE ARCHIVED=? AND STATUS=? AND SNODE=?</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="FB_Async_CD/FileCount" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CDCOUNT/text()"></assign>
+          </input>
+        </operation>
+
+        <operation name="Assign: Loop init">
+          <participant name="AssignService"/>
+          <output message="AssignServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="FB_Async_CD/BatchSize" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.BatchSize&apos;))"></assign>
+            <assign to="FB_Async_CD/LoopCounter">0</assign>
+            <assign to="FB_Async_CD/Sessions" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.Threads&apos;))"></assign>
+            <assign to="FB_Async_CD/Submitter" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.Submitter&apos;))"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <choice name="FilesToProcess?">
+          <select>
+            <case ref="FilesToProcess" activity="ProcessFiles"/>
+          </select>
+
+          <sequence name="ProcessFiles">
+            <assign name="Assign" to="FB_Async_CD/LockKey" from="concat(&apos;FB_Async_CD_Thread_&apos;, FB_Async_CD/Snode, &apos;_&apos;, string(timestamp() mod number(FB_Async_CD/Sessions)))"></assign>
+            <assign name="Assign" to="message_to_child/FB_Async_CD" from="/ProcessData/FB_Async_CD/*[local-name()=&apos;LockKey&apos; or local-name()=&apos;Submitter&apos; or local-name()=&apos;BatchSize&apos; or local-name()=&apos;Snode&apos;]"></assign>
+            <operation name="Invoke FB_Async_CD_Thread (async)">
+              <participant name="FB_INVOKE_SUBPROCESS"/>
+              <output message="InvokeSubProcessServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="INVOKE_MODE">ASYNC</assign>
+                <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+                <assign to="WFD_NAME">FB_Async_CD_Thread</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="Assign: Increment counters">
+              <participant name="AssignService"/>
+              <output message="AssignServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="FB_Async_CD/FileCount" from="number(FB_Async_CD/FileCount)-number(FB_Async_CD/BatchSize)"></assign>
+                <assign to="FB_Async_CD/LoopCounter" from="number(FB_Async_CD/LoopCounter)+1"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <repeat name="Return to FilesToProcess?" ref="FilesToProcess?"/>
+
+          </sequence>
+        </choice>
+        <operation name="Unlock">
+          <participant name="FB_LOCK"/>
+          <output message="LockServiceTypeInputMessage">
+            <assign to="ACTION">UNLOCK</assign>
+            <assign to="LOCK_KEY" from="concat(&apos;FB_Async_CD_Handler_&apos;, FB_Async_CD/Snode)"></assign>
+            <assign to="USER">FBSystem</assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <onFault>
+          <sequence name="ReleaseLock">
+            <operation name="Lock: release lock">
+              <participant name="FB_LOCK"/>
+              <output message="LockServiceTypeInputMessage">
+                <assign to="LOCK_KEY" from="concat(&apos;FB_Async_CD_Handler_&apos;, FB_Async_CD/Snode)"></assign>
+                <assign to="USER">FBSystem</assign>
+              </output>
+              <input message="inmsg">
+              </input>
+            </operation>
+
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">Continuing error state after releasing lock</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </onFault>
+      </sequence>
+      <onFault>
+        <sequence name="FBK020">
+          <operation name="FileBrokerEvent">
+            <participant name="FB_FILEBROKER_EVENT"/>
+            <output message="FileBrokerEventInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="EventCode">FBK020</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <onFault>
+      <sequence name="HandleErrors">
+        <assign name="Assign" to="ErrorHandled">true</assign>
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

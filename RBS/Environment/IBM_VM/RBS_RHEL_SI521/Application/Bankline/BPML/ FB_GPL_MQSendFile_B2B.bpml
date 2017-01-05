@@ -1,0 +1,304 @@
+<process name="FB_GPL_MQSendFile_B2B">
+  <rule name="DeliveryKey present">
+    <condition>number(FB_MQProcessAck/DeliveryKey)&gt;0</condition>
+  </rule>
+
+  <rule name="LargeFile">
+    <condition>number(FB_MQProcessAck/DocSize) &gt; sci-get-property(&apos;fbmq&apos;, &apos;B2B.GPL.LargeFileThreshold&apos;) </condition>
+  </rule>
+
+  <rule name="RetriesLeft">
+    <condition>count(MQRetry)&lt;sci-get-property(&apos;fbmq&apos;, &apos;B2B.GPL.File.Retries&apos;) </condition>
+  </rule>
+
+  <sequence name="Send File To B2B">
+    <sequence name="Route Handler">
+      <operation name="BPControl">
+        <participant name="FB_BPCONTROL"/>
+        <output message="BPControlInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="Action">Terminate</assign>
+          <assign to="HaltOnError">True</assign>
+          <assign to="WFID" from="string(RESTART_FROM)"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <assign name="Assign" to="FB_MQProcessAck/Consumer">B2B</assign>
+      <operation name="Invoke FB_MQProcessAck">
+        <participant name="FB_INVOKE_SUBPROCESS"/>
+        <output message="InvokeSubProcessServiceTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="INVOKE_MODE">INLINE</assign>
+          <assign to="WFD_NAME">FB_MQProcessAck</assign>
+          <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <sequence name="SubFlow: Determine queue">
+        <sequence name="Queue">
+          <choice name="Large File?">
+            <select>
+              <case ref="LargeFile" activity="Change Queue"/>
+            </select>
+
+            <sequence name="Change Queue">
+              <operation name="Execution Control: Move large file to another queue">
+                <participant name="FB_EXECUTION_CONTROL"/>
+                <output message="ExecCtrlServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="queueName" from="sci-get-property(&apos;fbmq&apos;, &apos;B2B.GPL.LargeFileQueue&apos;)"></assign>
+                  <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </choice>
+        </sequence>
+      </sequence>
+      <sequence name="MQ">
+        <operation name="MQ: Put file">
+          <participant name="FB_GPL_WMQ_FB_B2B_File_Snd_SG"/>
+          <output message="WebsphereMQInputMessage">
+            <assign to="buffersize" from="sci-get-property(&apos;fbmq&apos;, &apos;B2B.GPL.BufferSize&apos;)"></assign>
+            <assign to="snd_MQMD_msgType">DATAGRAM</assign>
+            <assign to="snd_maxMsgSize" from="sci-get-property(&apos;fbmq&apos;, &apos;B2B.GPL.MaxMsgSize&apos;)"></assign>
+            <assign to="snd_MQMD_correlId" from="string(MQ/correlationId)"></assign>
+            <assign to="snd_HexToByte_corId">Yes</assign>
+            <assign to="PrimaryDocument" from="FB_MQProcessAck/File/@SCIObjectID"></assign>
+            <assign to="snd_noSegSplit">Yes</assign>
+            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="FB_MQProcessAck/MQ" from="MQ/*"></assign>
+          </input>
+        </operation>
+
+        <onFault>
+          <sequence name="RetryMQ">
+            <choice name="RetriesLeft?">
+              <select>
+                <case ref="RetriesLeft" activity="Retry"/>
+              </select>
+
+              <sequence name="Retry">
+                <operation name="JDBC: Update ArrivedFile state as Routing">
+                  <participant name="FB_LWJDBC"/>
+                  <output message="LightweightJDBCAdapterTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="param2" from="string(FB_MQProcessAck/DeliveryKey)"></assign>
+                    <assign to="paramtype2">String</assign>
+                    <assign to="query_type">UPDATE</assign>
+                    <assign to="param1">Routing</assign>
+                    <assign to="paramtype1">String</assign>
+                    <assign to="sql">UPDATE FG_ARRIVEDFILE SET STATE=? WHERE ARRIVEDFILE_KEY IN  ( SELECT r.ARRIVEDFILE_KEY FROM FG_DELIVERY d, FG_ROUTE r WHERE d.ROUTE_KEY = r.ROUTE_KEY  AND d.DELIVERY_KEY=? )</assign>
+                  </output>
+                  <input message="inmsg">
+                  </input>
+                </operation>
+
+                <assign name="Assign" to="MQRetry" from="count(MQRetry)" append="true"></assign>
+                <operation name="Wait">
+                  <participant name="WaitService"/>
+                  <output message="WaitServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="WAIT_INTERVAL" from="sci-get-property(&apos;fbmq&apos;, &apos;B2B.GPL.File.RetryInterval&apos;)"></assign>
+                    <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+                <repeat name="Repeat" ref="MQ"/>
+
+              </sequence>
+            </choice>
+            <operation name="FGRouteEvent: FB_8058">
+              <participant name="FileGatewayRouteEventService"/>
+              <output message="FileGatewayRouteEventServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="RouteEntityKey" from="string(FB_MQProcessAck/DeliveryKey)"></assign>
+                <assign to="RouteEntityType">DELIVERY</assign>
+                <assign to="RouteMetadata">NotKnown</assign>
+                <assign to="RouteDataflowId" from="string(FB_MQProcessAck/DataflowID)"></assign>
+                <assign to="ExceptionLevel">Abnormal</assign>
+                <assign to="EventCode">FB_8058</assign>
+                <assign to="EventAttributes/WFID" from="string(FB_MQProcessAck/WFID)" append="true"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode" from="concat(&apos;All MQ retry attempts have failed: &apos;, Prev_NotSuccess_Adv_Status)"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </onFault>
+      </sequence>
+      <operation name="FGRouteEvent: FB_8014">
+        <participant name="FileGatewayRouteEventService"/>
+        <output message="FileGatewayRouteEventServiceTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="RouteEntityKey" from="string(FB_MQProcessAck/DeliveryKey)"></assign>
+          <assign to="RouteEntityType">DELIVERY</assign>
+          <assign to="RouteMetadata">NotKnown</assign>
+          <assign to="RouteDataflowId" from="string(FB_MQProcessAck/DataflowID)"></assign>
+          <assign to="ExceptionLevel">Normal</assign>
+          <assign to="EventCode">FB_8014</assign>
+          <assign to="EventAttributes/WFID" from="string(FB_MQProcessAck/WFID)" append="true"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <operation name="JDBC: Update ArrivedFile state as Routed">
+        <participant name="FB_LWJDBC"/>
+        <output message="LightweightJDBCAdapterTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="param2" from="string(FB_MQProcessAck/DeliveryKey)"></assign>
+          <assign to="paramtype2">String</assign>
+          <assign to="query_type">UPDATE</assign>
+          <assign to="param1">Routed</assign>
+          <assign to="paramtype1">String</assign>
+          <assign to="sql">UPDATE FG_ARRIVEDFILE SET STATE=? WHERE ARRIVEDFILE_KEY IN  ( SELECT r.ARRIVEDFILE_KEY FROM FG_DELIVERY d, FG_ROUTE r WHERE d.ROUTE_KEY = r.ROUTE_KEY  AND d.DELIVERY_KEY=? )</assign>
+        </output>
+        <input message="inmsg">
+        </input>
+      </operation>
+
+      <onFault>
+        <sequence name="FG Status Update">
+          <choice name="Delivery Key set?">
+            <select>
+              <case ref="DeliveryKey present" activity="Update Route"/>
+              <case ref="DeliveryKey present" negative="true" activity="No DKey -  throw error"/>
+            </select>
+
+            <sequence name="Update Route">
+              <operation name="JDBC: Get Consumer MsgID">
+                <participant name="FB_LWJDBC"/>
+                <output message="LightweightJDBCAdapterTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="param1" from="string(FB_MQProcessAck/DeliveryKey)"></assign>
+                  <assign to="paramtype1">String</assign>
+                  <assign to="sql">SELECT CONSUMER_MSGID FROM FG_DELIVERY WHERE DELIVERY_KEY=?</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="FB_MQProcessAck/ConsumerMsgID" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CONSUMER_MSGID/text()"></assign>
+                </input>
+              </operation>
+
+              <operation name="FileGatewayCompleteDeliveryServiceType">
+                <participant name="FileGatewayCompleteDeliveryService"/>
+                <output message="FileGatewayCompleteDeliveryServiceTypeInputMessage">
+                  <assign to="DeliveryKey" from="string(FB_MQProcessAck/DeliveryKey)"></assign>
+                  <assign to="Success">false</assign>
+                  <assign to="ErrorMessage" from="string(Prev_NotSuccess_Adv_Status)"></assign>
+                  <assign to="MessageId" from="string(FB_MQProcessAck/ConsumerMsgID)"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+              <operation name="Mailbox Update: Set as extractable">
+                <participant name="MailboxUpdate"/>
+                <output message="MailboxUpdateServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="MessageId" from="string(FB_MQProcessAck/ConsumerMsgID)"></assign>
+                  <assign to="ExtractableCount">1</assign>
+                </output>
+                <input message="inmsg">
+                </input>
+              </operation>
+
+            </sequence>
+            <sequence name="No DKey -  throw error">
+              <operation name="Business Process Exception">
+                <participant name="FB_BPEXCEPTION"/>
+                <output message="BPExceptionServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="exceptionCode">No DeliveryKey found for this file</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </choice>
+        </sequence>
+      </onFault>
+    </sequence>
+    <operation name="JDBC: Update Transfer status (2)">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1">2</assign>
+        <assign to="param2" from="string(FB_MQProcessAck/WFID)"></assign>
+        <assign to="param3" from="string(MQ/correlationId)"></assign>
+        <assign to="param4">FB</assign>
+        <assign to="param5" from="string(FB_MQProcessAck/Consumer)"></assign>
+        <assign to="param6">0</assign>
+        <assign to="param7">1</assign>
+        <assign to="paramtype1">Integer</assign>
+        <assign to="paramtype2">Integer</assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="paramtype4">String</assign>
+        <assign to="paramtype5">String</assign>
+        <assign to="paramtype6">Integer</assign>
+        <assign to="paramtype7">Integer</assign>
+        <assign to="query_type">UPDATE</assign>
+        <assign to="sql">UPDATE FB_MQ_TRANSFER SET STATUS=?, LAST_MODIFIED=sysdate, FILE_WFID=? WHERE CORRELATION_ID=? AND PRODUCER=? AND CONSUMER=? AND ARCHIVED=? AND STATUS=?</assign>
+      </output>
+      <input message="inmsg">
+      </input>
+    </operation>
+
+    <onFault>
+      <sequence name="FBK054">
+        <operation name="FileBrokerEvent: FBK054">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK054</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode">Halting process</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

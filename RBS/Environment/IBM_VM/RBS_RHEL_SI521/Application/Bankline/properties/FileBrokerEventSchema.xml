@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<EventSchemas>
+  	<schema key='FileBroker.FBEvent.BPException'>
+    		<ExceptionLevel><Abnormal/><Exception/></ExceptionLevel>
+    		<attribute name='ErrorCode' required='true' />
+   		 <attribute name='ErrorName' required='true' />
+		<attribute name='ErrorDescription' required='true' />
+		<attribute name='WFID' required='true' />
+		<attribute name='Info' required='true' />
+  	</schema>
+</EventSchemas>

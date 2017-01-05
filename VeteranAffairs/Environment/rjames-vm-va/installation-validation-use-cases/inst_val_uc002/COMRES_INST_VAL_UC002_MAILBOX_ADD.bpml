@@ -1,0 +1,29 @@
+<process name="COMRES_INST_VAL_UC002_MAILBOX_ADD">
+<!-- 
+Customer	:	Veterans Affairs
+Asset   	:	COMRES_INST_VAL_UC002
+Type		:	Business Process
+Developer	:	Robert James rjames@comresource.com
+Use Case	:	UC002
+Function	:	BP Will Add a file to a mailbox to bootstrap routing.
+				This BP will be bootstrapped from a file being placed
+				within a monitored folder via the COMRES_INST_VAL_FSA File
+				System Adapter
+ -->
+	<sequence name="MainSequence">
+	    <operation name="Mailbox Add">
+	      <participant name="COMRES_INST_VAL_MAILBOX_ADD"/>
+	      <output message="MailboxAddServiceTypeInputMessage">
+	        <assign to="Extractable">YES</assign>
+	        <assign to="MailboxPath">/inst-val-uc002-fs-1</assign>
+	        <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+	      </output>
+	      <input message="inmsg">
+	        <assign to="." from="*"></assign>
+	      </input>
+	    </operation>	
+	<onFault>
+		<assign to="DoSomething">OnFault</assign>
+	</onFault>
+	</sequence>
+</process>

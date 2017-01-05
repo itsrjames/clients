@@ -1,0 +1,98 @@
+<process name="FB_GPL_MQAlerts_SFG">
+  <sequence name="MQAlerts">
+    <operation name="Lock">
+      <participant name="FB_LOCK"/>
+      <output message="LockServiceTypeInputMessage">
+        <assign to="USER">FBSystem</assign>
+        <assign to="LOCK_KEY">FB_GPL_MQAlerts_SFG</assign>
+        <assign to="ACTION">LOCK</assign>
+        <assign to="DURATION">-1</assign>
+        <assign to="CLEAR_ON_START_UP">TRUE</assign>
+      </output>
+      <input message="inmsg">
+      </input>
+    </operation>
+
+    <sequence name="Query Alerts">
+      <operation name="Assign: init">
+        <participant name="AssignService"/>
+        <output message="AssignServiceTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="FB_MQAlerts/AckErrorCode">FBK033</assign>
+          <assign to="FB_MQAlerts/FileErrorCode">FBK034</assign>
+          <assign to="FB_MQAlerts/RemoteSystem">SFG</assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <operation name="Invoke FB_MQAlerts (inline)">
+        <participant name="FB_INVOKE_SUBPROCESS"/>
+        <output message="InvokeSubProcessServiceTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="INVOKE_MODE">INLINE</assign>
+          <assign to="WFD_NAME">FB_MQAlerts</assign>
+          <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <operation name="UnLock">
+        <participant name="FB_LOCK"/>
+        <output message="LockServiceTypeInputMessage">
+          <assign to="USER">FBSystem</assign>
+          <assign to="LOCK_KEY">FB_GPL_MQAlerts_SFG</assign>
+          <assign to="ACTION">UNLOCK</assign>
+        </output>
+        <input message="inmsg">
+        </input>
+      </operation>
+
+      <onFault>
+        <sequence name="Release Lock">
+          <operation name="UnLock">
+            <participant name="FB_LOCK"/>
+            <output message="LockServiceTypeInputMessage">
+              <assign to="USER">FBSystem</assign>
+              <assign to="LOCK_KEY">FB_GPL_MQAlerts_SFG</assign>
+              <assign to="ACTION">UNLOCK</assign>
+            </output>
+            <input message="inmsg">
+            </input>
+          </operation>
+
+          <operation name="Business Process Exception">
+            <participant name="FB_BPEXCEPTION"/>
+            <output message="BPExceptionServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="exceptionCode">Continuing error state after releasing lock</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <onFault>
+      <sequence name="FBK030">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK030</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>
+

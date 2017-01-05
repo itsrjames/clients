@@ -1,0 +1,103 @@
+<process name="FB_Deferred_Delivery_CDWTO">
+  <rule name="isDeliveryKey">
+    <condition>string-length(Defer/DELIVERY_KEY)&gt;0</condition>
+  </rule>
+
+  <sequence name="DeferDelivery CDWTO">
+    <operation name="JDBC: Find DataflowId">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1" from="string(Defer/DELIVERY_KEY)"></assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="sql">SELECT DATA_FLOW_ID FROM FG_DELIVERY WHERE DELIVERY_KEY=?</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="DataflowID" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/DATA_FLOW_ID)"></assign>
+      </input>
+    </operation>
+
+    <choice name="IsDeliveryKey?">
+      <select>
+        <case ref="isDeliveryKey" activity="fire event"/>
+      </select>
+
+      <sequence name="fire event">
+        <operation name="BP Metadata: Get WFID">
+          <participant name="FB_BPMETADATA"/>
+          <output message="BPMetaDataServiceTypeInputMessage">
+            <assign to="LINKAGE">FALSE</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="WFID" from="string(BPDATA/WORKFLOW_ID)"></assign>
+          </input>
+        </operation>
+
+        <operation name="FileGatewayRouteEventServiceType">
+          <participant name="FileGatewayRouteEventService"/>
+          <output message="FileGatewayRouteEventServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="RouteEntityKey" from="string(Defer/DELIVERY_KEY)"></assign>
+            <assign to="RouteEntityType">DeliveryKey</assign>
+            <assign to="RouteMetadata">NotKnown</assign>
+            <assign to="RouteDataflowId" from="string(DataflowID)"></assign>
+            <assign to="ExceptionLevel">Normal</assign>
+            <assign to="EventCode">FB_8003</assign>
+            <assign to="EventAttributes/Filename" from="string(Defer/CONSUMER_FILENAME)" append="true"></assign>
+            <assign to="EventAttributes/MessageId" from="string(Defer/DEFER_KEY)" append="true"></assign>
+            <assign to="EventAttributes/WFID" from="string(WFID)" append="true"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="JDBC: Update FB_DEF_DELIVERY with WFID">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="param2" from="string(Defer/DEFER_KEY)"></assign>
+            <assign to="paramtype2">String</assign>
+            <assign to="paramtype3">String</assign>
+            <assign to="param3" from="string(Defer/DEFER_TYPE)"></assign>
+            <assign to="paramtype4">Integer</assign>
+            <assign to="param4">0</assign>
+            <assign to="query_type">UPDATE</assign>
+            <assign to="param1" from="string(WFID)"></assign>
+            <assign to="paramtype1">Integer</assign>
+            <assign to="sql">UPDATE FB_DEFER_DELIVERY SET COMPLETED_WFID=? WHERE DEFER_KEY=? AND DEFER_TYPE=? AND ARCHIVED=?</assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+    <onFault>
+      <sequence name="FBK086">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK086</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode">Setting as HALTED</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

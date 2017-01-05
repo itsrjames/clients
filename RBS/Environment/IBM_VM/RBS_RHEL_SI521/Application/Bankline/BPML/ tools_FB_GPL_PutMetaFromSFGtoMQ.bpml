@@ -1,0 +1,15 @@
+<process name="tools_FB_GPL_PutMetaFromSFGtoMQ">
+  <sequence>
+    <operation name="WebSphere MQ Adapter">
+      <participant name="tools_FB_GPL_PutMetaFromSFGtoMQ"/>
+      <output message="WebsphereMQInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="snd_MQMD_msgType">DATAGRAM</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+  </sequence>
+</process>

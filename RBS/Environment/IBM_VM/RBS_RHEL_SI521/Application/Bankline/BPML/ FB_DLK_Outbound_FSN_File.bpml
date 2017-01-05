@@ -1,0 +1,201 @@
+<process name="FB_DLK_Outbound_FSN_File">
+  <rule name="Unknown Submitter">
+    <condition>string(Datalink/CSID)=sci-get-property(&apos;fbdatalink&apos;, &apos;FSN.Unknown.CSID&apos;)</condition>
+  </rule>
+
+  <rule name="MT198Format">
+    <condition>string(Datalink/FSNFormat)=&apos;MT198&apos;</condition>
+  </rule>
+
+  <rule name="UnknownFormat">
+    <condition>string(Datalink/FSNFormat)!=&apos;MT198&apos;</condition>
+  </rule>
+
+  <sequence name="Datalink FSN Outbound">
+    <assign name="Assign" to="Datalink" from="/ProcessData/*[local-name()=&apos;IFilename&apos; or local-name()=&apos;CSID&apos; or local-name()=&apos;Format&apos; or local-name()=&apos;Type&apos; or local-name()=&apos;FSNID&apos; or local-name()=&apos;ProducerRef&apos;]"></assign>
+    <choice name="KnownCustomer?">
+      <select>
+        <case ref="Unknown Submitter" activity="Unknown"/>
+        <case ref="Unknown Submitter" negative="true" activity="Known"/>
+      </select>
+
+      <sequence name="Unknown">
+        <operation name="Assign: Set defaults">
+          <participant name="AssignService"/>
+          <output message="AssignServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="Datalink/Brand" from="sci-get-property(&apos;fbdatalink&apos;, &apos;FSN.Unknown.Brand&apos;)"></assign>
+            <assign to="Datalink/FSNFormatCode" from="sci-get-property(&apos;fbdatalink&apos;, &apos;FSN.Unknown.Format&apos;)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+      <sequence name="Known">
+        <operation name="JDBC: Query Bankline for Brand">
+          <participant name="FB_BL_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="param1" from="string(Datalink/CSID)"></assign>
+            <assign to="param2">BRAND_CODE</assign>
+            <assign to="param3">RESPONSE_AREA</assign>
+            <assign to="paramtype1">Double</assign>
+            <assign to="paramtype2">String</assign>
+            <assign to="paramtype3">String</assign>
+            <assign to="query_type">PROCEDURE</assign>
+            <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbdatalink&apos;, &apos;BLSchema&apos;), &apos;.YJSC11_GETCUSTBRND(?,?,?)&apos;)"></assign>
+            <assign to="paramDirection3">OUT</assign>
+            <assign to="paramDirection2">OUT</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="Datalink/Brand" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+            <assign to="YJSC11Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM2)"></assign>
+          </input>
+        </operation>
+
+        <operation name="JDBC: Query SA for FR-FA format">
+          <participant name="FB_SA_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1" from="string(Datalink/CSID)"></assign>
+            <assign to="param2" from="string(Service)"></assign>
+            <assign to="param3">FLSTNOFT</assign>
+            <assign to="param4">CUST_AGMT_REF</assign>
+            <assign to="param5">DATA_ELEMENT_CODE</assign>
+            <assign to="param6">SERVICE_DETAIL</assign>
+            <assign to="param7">RESPONSE_AREA</assign>
+            <assign to="paramtype1">Double</assign>
+            <assign to="paramtype2">String</assign>
+            <assign to="paramtype3">String</assign>
+            <assign to="paramtype4">Long</assign>
+            <assign to="paramtype5">String</assign>
+            <assign to="paramtype6">String</assign>
+            <assign to="paramtype7">String</assign>
+            <assign to="query_type">PROCEDURE</assign>
+            <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbdatalink&apos;, &apos;SASchema&apos;), &apos;.YJSC15_GETCUSTPREF(?,?,?,?,?,?,?)&apos;)"></assign>
+            <assign to="paramDirection4">OUT</assign>
+            <assign to="paramDirection5">OUT</assign>
+            <assign to="paramDirection6">OUT</assign>
+            <assign to="paramDirection7">OUT</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="Datalink/CREF" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+            <assign to="Datalink/FSNFormatCode" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM3)"></assign>
+            <assign to="YJSC15Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM4)"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+    <operation name="Assign: Determine format">
+      <participant name="AssignService"/>
+      <output message="AssignServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="Datalink/FSNFormat" from="sci-get-property(&apos;fbdatalink&apos;, concat(&apos;FSN.Format.&apos;, Datalink/FSNFormatCode))"></assign>
+        <assign to="Datalink/SenderID" from="sci-get-property(&apos;fbdatalink&apos;, concat(&apos;FSN.&apos;,Datalink/Brand,&apos;.SenderID&apos;))"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <choice name="Format?">
+      <select>
+        <case ref="MT198Format" activity="MT198"/>
+        <case ref="UnknownFormat" activity="Unsupported"/>
+      </select>
+
+      <sequence name="MT198">
+        <operation name="XSLT: Convert to MT198">
+          <participant name="FB_XSLT"/>
+          <output message="XSLTServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="additional_xslt_params" from="concat(&apos;SenderID=&apos;, Datalink/SenderID, &apos;=ReceiverID=&apos;, Datalink/CSID, &apos;=UnknownCSID=&apos;, sci-get-property(&apos;fbdatalink&apos;, &apos;FSN.Unknown.CSID&apos;))"></assign>
+            <assign to="check_memory_requirements">FALSE</assign>
+            <assign to="incremental_transform">FALSE</assign>
+            <assign to="xml_input_from">PrimaryDoc</assign>
+            <assign to="xml_input_validation">NO</assign>
+            <assign to="xslt_name">FB_Format_FBXML_MT198</assign>
+            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+      <sequence name="Unsupported">
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode" from="concat(&apos;The FSN format (&apos;, Datalink/FSNFormatCode, &apos;)is not supported&apos;)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+    <operation name="FBGPLFilename: Create GPL filename">
+      <participant name="FB_GPLFilename"/>
+      <output message="FileBrokerGPLFilenameInputMessage">
+        <assign to="Format" from="string(Datalink/FSNFormat)"></assign>
+        <assign to="Type" from="string(Datalink/Type)"></assign>
+        <assign to="ProducerRef" from="string(Datalink/ProducerRef)"></assign>
+        <assign to="RouterWFID" from="string(RouterWFID)"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="Datalink/FSNFilename" from="string(GPLFilename)" append="true"></assign>
+      </input>
+    </operation>
+
+    <assign name="Assign" to="Datalink/RFilename" from="concat(Datalink/CSID, &apos;.&apos;, Datalink/FSNFormat, &apos;.&apos;,Datalink/Type, &apos;.&apos;, Datalink/FSNID)"></assign>
+    <assign name="Assign" to="Datalink/CFilename" from="concat(Datalink/RFilename, &apos;_&apos;, Datalink/FSNFilename)"></assign>
+    <operation name="Get Doc Info: Rename document">
+      <participant name="FB_GETDOCINFO"/>
+      <output message="GetDocumentInfoServiceTypeInputMessage">
+        <assign to="DocumentName" from="string(Datalink/CFilename)"></assign>
+        <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+        <assign to="updateMetaDataOnly">true</assign>
+        <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+      </output>
+      <input message="inmsg">
+      </input>
+    </operation>
+
+    <onFault>
+      <sequence name="FB_8072">
+        <assign name="Assign" to="RouteOnErrorStatus">false</assign>
+        <operation name="FB Route Event: FB_8072">
+          <participant name="FileGatewayRouteEventService"/>
+          <output message="FileGatewayRouteEventServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FB_8072</assign>
+            <assign to="ExceptionLevel">Abnormal</assign>
+            <assign to="EventAttributes/Filename" from="string(Datalink/IFilename)" append="true"></assign>
+            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Mailbox Add: Add to Route DeadLetter">
+          <participant name="FB_MAILBOXADD"/>
+          <output message="MailboxAddServiceTypeInputMessage">
+            <assign to="Extractable">YES</assign>
+            <assign to="MailboxPath" from="sci-get-property(&apos;fbdatalink&apos;, &apos;Route.DeadLetter&apos;)"></assign>
+            <assign to="MessageName" from="string(IFilename)"></assign>
+            <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

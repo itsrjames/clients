@@ -1,0 +1,103 @@
+<process name="tools_FB_ReceiveMeta_ToB2B">
+  <rule name="IsMQRecord">
+    <condition>string-length(MQStatus)&gt;0</condition>
+  </rule>
+
+  <sequence name="Main">
+    <operation name="XML Encoder: Read MQ Meta Message">
+      <participant name="FB_XMLENCODER"/>
+      <output message="XMLEncoderTypeInputMessage">
+        <assign to="map_name">FB_ReadMQMDMessage</assign>
+        <assign to="mode">default_behavior</assign>
+        <assign to="output_to_process_data">YES</assign>
+        <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="MetaData" from="string(INPUT/Record/MetaData)"></assign>
+      </input>
+    </operation>
+
+    <operation name="JDBC: Query FB_MQ_TRANSFER">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1" from="string(MQ/correlationId)"></assign>
+        <assign to="param2">FB</assign>
+        <assign to="param3">B2B</assign>
+        <assign to="param4">0</assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="paramtype4">Integer</assign>
+        <assign to="sql">SELECT STATUS FROM TOOLS_FB_MQ_FILE_TRANSFER WHERE CORRELATION_ID=? AND PRODUCER=? AND CONSUMER=? AND ARCHIVED=?</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="MQStatus" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATUS/text()"></assign>
+      </input>
+    </operation>
+
+    <choice name="New Message?">
+      <select>
+        <case ref="IsMQRecord" negative="true" activity="Insert MQ Transfer record"/>
+      </select>
+
+      <sequence name="Insert MQ Transfer record">
+        <operation name="JDBC: Insert FB_MQ_TRANSFER">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="param1" from="string(MQ/correlationId)"></assign>
+            <assign to="param2">FB</assign>
+            <assign to="param3">B2B</assign>
+            <assign to="param4" from="string(MetaData)"></assign>
+            <assign to="param5">15</assign>
+            <assign to="param6">0</assign>
+            <assign to="paramtype1">String</assign>
+            <assign to="paramtype2">String</assign>
+            <assign to="paramtype3">String</assign>
+            <assign to="paramtype4">String</assign>
+            <assign to="paramtype5">Integer</assign>
+            <assign to="paramtype6">Integer</assign>
+            <assign to="query_type">INSERT</assign>
+            <assign to="sql">INSERT INTO TOOLS_FB_MQ_FILE_TRANSFER (CORRELATION_ID, PRODUCER, CONSUMER, FILENAME, EXPIRES, STATUS, CREATED, LAST_MODIFIED) VALUES(?,?,?,?,(sysdate+(?/(60*24))),?,sysdate,sysdate)</assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+    <operation name="MQ: Put Ack from b2B to FB">
+      <participant name="tools_FB_GPL_PutAckFromB2BtoMQ"/>
+      <output message="WebsphereMQInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="snd_HexToByte_corId">Yes</assign>
+        <assign to="snd_MQMD_correlId" from="string(MQ/correlationId)"></assign>
+        <assign to="snd_MQMD_msgType">DATAGRAM</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Lightweight JDBC Adapter">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1" from="string(MQ/correlationId)"></assign>
+        <assign to="param2">FB</assign>
+        <assign to="param3">B2B</assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="query_type">UPDATE</assign>
+        <assign to="sql">UPDATE TOOLS_FB_MQ_FILE_TRANSFER SET STATUS=1 WHERE CORRELATION_ID=? AND PRODUCER=? AND CONSUMER=?</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+  </sequence>
+</process>
+

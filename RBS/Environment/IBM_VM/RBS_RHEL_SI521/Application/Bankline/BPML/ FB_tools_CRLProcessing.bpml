@@ -1,0 +1,17 @@
+<process name="FB_tools_CRLProcessing">
+  <sequence name="CRL">
+    <operation name="CRL Processing Service">
+      <participant name="FB_CRL_PROCESSING"/>
+      <output message="CRLProcessingServiceInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="FailOnUnsupportedCRLCritExtns">false</assign>
+        <assign to="FailOnExpiredCRL">false</assign>
+        <assign to="ShowTranscripts">true</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="Status_Rpt(&apos;TranslationReport&apos;)"></assign>
+      </input>
+    </operation>
+
+  </sequence>
+</process>

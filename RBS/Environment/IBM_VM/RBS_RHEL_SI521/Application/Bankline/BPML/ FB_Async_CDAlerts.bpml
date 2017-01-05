@@ -1,0 +1,44 @@
+<process name="FB_Async_CDAlerts">
+  <rule name="Alerts">
+    <condition>number(AlertCount)&gt;0</condition>
+  </rule>
+
+  <sequence name="Aysnc CD Alert">
+    <operation name="JDBC: Query FB_ASYNC_CD">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="param2">1</assign>
+        <assign to="paramtype2">Integer</assign>
+        <assign to="param3" from="sci-get-property(&apos;fbasynccd&apos;, &apos;processed.timeout&apos;)"></assign>
+        <assign to="paramtype3">Integer</assign>
+        <assign to="param1">0</assign>
+        <assign to="paramtype1">Integer</assign>
+        <assign to="sql">SELECT COUNT(ASYNC_CD_ID) AS ALERTCOUNT FROM FB_ASYNC_CD WHERE (STATUS=? OR STATUS=?) AND CREATED&lt;(sysdate-(?/60/24))</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="AlertCount" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row/ALERTCOUNT/text()"></assign>
+      </input>
+    </operation>
+
+    <choice>
+      <select>
+        <case ref="Alerts" activity="CD Alert"/>
+      </select>
+
+      <sequence name="CD Alert">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK025</assign>
+            <assign to="Info" from="concat(AlertCount, &apos; file(s) are waiting&apos;)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+  </sequence>
+</process>

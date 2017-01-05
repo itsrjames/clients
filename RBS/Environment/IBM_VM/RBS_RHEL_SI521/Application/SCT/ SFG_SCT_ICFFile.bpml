@@ -1,0 +1,758 @@
+<process name="SFG_SCT_ICFFile">
+  <rule name="MoreMessages">
+    <condition>number(SFG_SCT_ICFFile/MessagesIdentified)&gt;0</condition>
+  </rule>
+
+  <rule name="ThreadsNotComplete">
+    <condition>(number(SFG_SCT_ICFFile/ThreadStatus/row[number(STATUS)&lt;0]/COUNT)&gt;0
+or
+number(SFG_SCT_ICFFile/ThreadStatus/row[number(STATUS)=0]/COUNT)&gt;0)
+and
+number(SFG_SCT_ICFFile/ActualWaits)&lt;=number(SFG_SCT_ICFFile/MaxWaits)
+</condition>
+  </rule>
+
+  <rule name="ThreadMaxWaits">
+    <condition>number(SFG_SCT_ICFFile/ActualWaits)&gt;number(SFG_SCT_ICFFile/MaxWaits)</condition>
+  </rule>
+
+  <rule name="ThreadInError">
+    <condition>number(SFG_SCT_ICFFile/ThreadStatus/row[number(STATUS)&lt;0]/COUNT)&gt;0</condition>
+  </rule>
+
+  <rule name="ICFInvalid">
+    <condition>string(SFG_SCT_ICFFile/ICFValidationStatus)!=&apos;true&apos;</condition>
+  </rule>
+
+  <rule name="ICFInvalidAllowThru">
+    <condition>string-length(RESTART_FROM)&gt;0 and string(SFG_SCT_ICFFile/ICFValidateErrorCode)=&apos;SCT28&apos;</condition>
+  </rule>
+
+  <sequence name="Main">
+    <sequence name="ICFFile">
+      <operation name="BPControl">
+        <participant name="FB_BPCONTROL"/>
+        <output message="BPControlInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="Action">Terminate</assign>
+          <assign to="HaltOnError">True</assign>
+          <assign to="WFID" from="string(RESTART_FROM)"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <operation name="LWJDBC: Reset Payment Group">
+        <participant name="FB_LWJDBC"/>
+        <output message="LightweightJDBCAdapterTypeInputMessage">
+          <assign to="param1">0</assign>
+          <assign to="param2">0</assign>
+          <assign to="param3" from="number(SFG_SCT_ICFFile/BundleID)"></assign>
+          <assign to="paramtype1">Integer</assign>
+          <assign to="paramtype2">Integer</assign>
+          <assign to="paramtype3">Integer</assign>
+          <assign to="query_type">UPDATE</assign>
+          <assign to="sql">UPDATE SCT_PAYMENT SET GROUP1=?, GROUP2=? WHERE BUNDLE_ID=?</assign>
+          <assign to="." from="*"></assign>
+        </output>
+        <input message="inmsg">
+        </input>
+      </operation>
+
+      <sequence name="ICFFilename">
+        <operation name="Timestamp: Get Date for filename">
+          <participant name="TimestampUtilService"/>
+          <output message="TimestampUtilServiceTypeInputMessage">
+            <assign to="action">current_time</assign>
+            <assign to="format">yyyyMMdd</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/CurrentDate" from="string(time)"></assign>
+          </input>
+        </operation>
+
+        <operation name="BP Metadata: get WFID">
+          <participant name="FB_BPMETADATA"/>
+          <output message="BPMetaDataServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/WFID" from="string(BPDATA/WORKFLOW_ID)"></assign>
+          </input>
+        </operation>
+
+        <operation name="Assign: Create filename and headers">
+          <participant name="AssignService"/>
+          <output message="AssignServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="SFG_SCT_ICFFile/Filename" from="concat(&apos;S202SCT&apos;, SFG_SCT_ICFFile/Parameters/ENTITY, SFG_SCT_ICFFile/CurrentDate, substring(concat( &apos;0000000&apos;, SFG_SCT_ICFFile/WFID),string-length(concat( &apos;0000000&apos;, SFG_SCT_ICFFile/WFID))-6), &apos;.I&apos;)"></assign>
+            <assign to="SFG_SCT_ICFFile/Reference" from="concat(&apos;I&apos;,substring(concat( &apos;0000000&apos;, SFG_SCT_ICFFile/BundleID),string-length(concat( &apos;0000000&apos;, SFG_SCT_ICFFile/BundleID))-6), substring(concat( &apos;0000000&apos;, SFG_SCT_ICFFile/WFID),string-length(concat( &apos;0000000&apos;, SFG_SCT_ICFFile/WFID))-6), &apos;I&apos;)"></assign>
+            <assign to="SFG_SCT_ICFFile/RcvgInst" from="sci-get-property(&apos;sct&apos;, &apos;sct.icf.RcvgInst&apos;)"></assign>
+            <assign to="SFG_SCT_ICFFile/TestCode" from="sci-get-property(&apos;sct&apos;, &apos;sct.icf.TestCode&apos;)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="LWJDBC: Update Bundle record (2)">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1">2</assign>
+            <assign to="param2" from="string(SFG_SCT_ICFFile/Filename)"></assign>
+            <assign to="param3" from="string(SFG_SCT_ICFFile/WFID)"></assign>
+            <assign to="param4" from="string(SFG_SCT_ICFFile/Reference)"></assign>
+            <assign to="param5" from="number(SFG_SCT_ICFFile/BundleID)"></assign>
+            <assign to="paramtype1">Integer</assign>
+            <assign to="paramtype2">String</assign>
+            <assign to="paramtype3">Integer</assign>
+            <assign to="paramtype4">String</assign>
+            <assign to="paramtype5">Integer</assign>
+            <assign to="query_type">UPDATE</assign>
+            <assign to="sql">UPDATE SCT_BUNDLE SET STATUS = ?, FILENAME=?, WF_ID=?, REFERENCE=?  WHERE BUNDLE_ID=?</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <onFault>
+          <sequence name="SCT14">
+            <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT14</assign>
+            <operation name="Invoke Throw Error">
+              <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+              <output message="InlineInvokeBPTypeInputMessage">
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </onFault>
+      </sequence>
+      <operation name="Assign">
+        <participant name="AssignService"/>
+        <output message="AssignServiceTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="SFG_SCT_ICFFile/MessageCount">0</assign>
+          <assign to="SFG_SCT_ICFThread" from="//*[local-name()=&apos;BundleID&apos; or local-name()=&apos;EntityID&apos;]"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <sequence name="BundlePayments">
+        <assign name="Assign" to="SFG_SCT_ICFThread/ThreadID" from="getUniqueID()"></assign>
+        <operation name="LWJDBC: Identify Batch of messsages for thread">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1" from="string(SFG_SCT_ICFThread/ThreadID)"></assign>
+            <assign to="param2">0</assign>
+            <assign to="param3" from="number(SFG_SCT_ICFFile/BundleID)"></assign>
+            <assign to="param4" from="number(sci-get-property(&apos;sct&apos;, &apos;sct.thread.bulk.trx&apos;))"></assign>
+            <assign to="paramtype1">String</assign>
+            <assign to="paramtype2">String</assign>
+            <assign to="paramtype3">Integer</assign>
+            <assign to="paramtype4">Integer</assign>
+            <assign to="query_type">UPDATE</assign>
+            <assign to="sql">UPDATE SCT_PAYMENT SET GROUP1=? WHERE NVL(GROUP1, &apos;0&apos;)=? AND BUNDLE_ID=? AND ROWNUM &lt;=?</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/MessagesIdentified" from="number(DocToDOM(PrimaryDocument)//row/Rows_Affected)"></assign>
+          </input>
+        </operation>
+
+        <choice name="MoreMessages?">
+          <select>
+            <case ref="MoreMessages" activity="BundleThread"/>
+          </select>
+
+          <sequence name="BundleThread">
+            <assign name="Assign" to="message_to_child" from="SFG_SCT_ICFThread"></assign>
+            <operation name="LWJDBC: Register Thread">
+              <participant name="FB_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param1" from="string(SFG_SCT_ICFThread/ThreadID)"></assign>
+                <assign to="param2" from="number(SFG_SCT_ICFFile/WFID)"></assign>
+                <assign to="paramtype1">String</assign>
+                <assign to="paramtype2">Integer</assign>
+                <assign to="query_type">INSERT</assign>
+                <assign to="sql">INSERT INTO FB_WF_THREAD(WF_THREAD_ID, PARENT_WFID, CREATED, LAST_MODIFIED) VALUES(?,?, sysdate, sysdate)</assign>
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+              </input>
+            </operation>
+
+            <operation name="Invoke SFG_SCT_ICFThread">
+              <participant name="FB_INVOKE_SUBPROCESS"/>
+              <output message="InvokeSubProcessServiceTypeInputMessage">
+                <assign to="INVOKE_MODE">ASYNC</assign>
+                <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+                <assign to="WFD_NAME">SFG_SCT_ICFThread</assign>
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="Release MTC">
+              <participant name="FB_RELEASE"/>
+              <output message="ReleaseServiceTypeInputMessage">
+                <assign to="TARGET">message_to_child</assign>
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <assign name="Assign" to="SFG_SCT_ICFFile/MessageCount" from="number(SFG_SCT_ICFFile/MessageCount)+ number(SFG_SCT_ICFFile/MessagesIdentified)"></assign>
+            <repeat name="Return to BundlePayments" ref="BundlePayments"/>
+
+          </sequence>
+        </choice>
+        <onFault>
+          <sequence name="SCT15">
+            <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT15</assign>
+            <operation name="Invoke ThrowError">
+              <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+              <output message="InlineInvokeBPTypeInputMessage">
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </onFault>
+      </sequence>
+      <operation name="LWJDBC: Update Bundle Status (3)">
+        <participant name="FB_LWJDBC"/>
+        <output message="LightweightJDBCAdapterTypeInputMessage">
+          <assign to="param1">3</assign>
+          <assign to="param2" from="number(SFG_SCT_ICFFile/BundleID)"></assign>
+          <assign to="paramtype1">Integer</assign>
+          <assign to="paramtype2">Integer</assign>
+          <assign to="query_type">UPDATE</assign>
+          <assign to="sql">UPDATE SCT_BUNDLE SET STATUS = ? WHERE BUNDLE_ID=?</assign>
+          <assign to="." from="*"></assign>
+        </output>
+        <input message="inmsg">
+        </input>
+      </operation>
+
+      <sequence name="ThreadMerge">
+        <operation name="Assign">
+          <participant name="AssignService"/>
+          <output message="AssignServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="SFG_SCT_ICFFile/ThreadWait" from="if( number(SFG_SCT_ICFFile/MessageCount)&lt; number(sci-get-property(&apos;sct&apos;, &apos;sct.thread.bulk.trx&apos;)),   floor(1 + (( number(SFG_SCT_ICFFile/MessageCount) div number(sci-get-property(&apos;sct&apos;, &apos;sct.thread.bulk.trx&apos;)) )*number(sci-get-property(&apos;sct&apos;, &apos;sct.thread.bulk.wait&apos;)))  )   , number(sci-get-property(&apos;sct&apos;, &apos;sct.thread.bulk.wait&apos;)))"></assign>
+            <assign to="SFG_SCT_ICFFile/MaxWaits" from="sci-get-property(&apos;sct&apos;, &apos;sct.thread.bulk.max&apos;)"></assign>
+            <assign to="SFG_SCT_ICFFile/ActualWaits">0</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <sequence name="WaitForThreads">
+          <operation name="LWJDBC: Get Thread Status">
+            <participant name="FB_LWJDBC"/>
+            <output message="LightweightJDBCAdapterTypeInputMessage">
+              <assign to="param1" from="number(SFG_SCT_ICFFile/WFID)"></assign>
+              <assign to="paramtype1">Integer</assign>
+              <assign to="sql">SELECT COUNT(*) as COUNT, STATUS as STATUS FROM FB_WF_THREAD WHERE PARENT_WFID=? GROUP BY STATUS</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="SFG_SCT_ICFFile/ThreadStatus" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/*"></assign>
+            </input>
+          </operation>
+
+          <choice name="ThreadStatus?">
+            <select>
+              <case ref="ThreadInError" activity="ThreadInError"/>
+              <case ref="ThreadInError" negative="true" activity="NoThreadsInError"/>
+            </select>
+
+            <sequence name="ThreadInError">
+              <operation name="Business ProcessException">
+                <participant name="FB_BPEXCEPTION"/>
+                <output message="BPExceptionServiceTypeInputMessage">
+                  <assign to="exceptionCode">Error detected in ICF Bulking thread</assign>
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+            <sequence name="NoThreadsInError">
+              <choice name="WaitingForThreads?">
+                <select>
+                  <case ref="ThreadsNotComplete" activity="WaitingForThreads"/>
+                  <case ref="ThreadMaxWaits" activity="WaitsExceeded"/>
+                </select>
+
+                <sequence name="WaitingForThreads">
+                  <assign name="Assign" to="SFG_SCT_ICFFile/ActualWaits" from="number(SFG_SCT_ICFFile/ActualWaits)+1"></assign>
+                  <operation name="Wait">
+                    <participant name="WaitService"/>
+                    <output message="WaitServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="WAIT_INTERVAL" from="number(SFG_SCT_ICFFile/ThreadWait)"></assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                  <operation name="Release Service">
+                    <participant name="FB_RELEASE"/>
+                    <output message="ReleaseServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="TARGET">SFG_SCT_ICFFile/ThreadStatus</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                  <repeat name="Return to WaitForThreads" ref="WaitForThreads"/>
+
+                </sequence>
+                <sequence name="WaitsExceeded">
+                  <operation name="Business Process Exception">
+                    <participant name="FB_BPEXCEPTION"/>
+                    <output message="BPExceptionServiceTypeInputMessage">
+                      <assign to="exceptionCode">Maximum number of Thread Waits exceeded. Check each SFG_SCT_ICFThread process for completion</assign>
+                      <assign to="." from="*"></assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </choice>
+            </sequence>
+          </choice>
+        </sequence>
+        <operation name="XSLT: Create Header">
+          <participant name="FB_XSLT"/>
+          <output message="XSLTServiceTypeInputMessage">
+            <assign to="check_memory_requirements">FALSE</assign>
+            <assign to="incremental_transform">TRUE</assign>
+            <assign to="input_pd_xpath">/ProcessData</assign>
+            <assign to="xml_input_from">ProcData</assign>
+            <assign to="xml_input_validation">NO</assign>
+            <assign to="xslt_name">SFG_SCT_ICFFile_CreateHeader</assign>
+            <assign to="PrimaryDocument" from="SFG_SCT_ICFFile/BundleDocument/@SCIObjectID"></assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/HeaderDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+          </input>
+        </operation>
+
+        <operation name="Get Document Infor: Get Header DocID">
+          <participant name="FB_GETDOCINFO"/>
+          <output message="GetDocumentInfoServiceTypeInputMessage">
+            <assign to="PrimaryDocument" from="SFG_SCT_ICFFile/HeaderDocument/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/ThreadDocList/DOC_ID" from="string(DocumentId)" append="true"></assign>
+          </input>
+        </operation>
+
+        <operation name="LWJDBC: Get Thread Documents">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1" from="number(SFG_SCT_ICFFile/BundleID)"></assign>
+            <assign to="paramtype1">Integer</assign>
+            <assign to="sql">SELECT DISTINCT GROUP2 as DOC_ID FROM SCT_PAYMENT WHERE BUNDLE_ID=?</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/ThreadDocList" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//DOC_ID" append="true"></assign>
+          </input>
+        </operation>
+
+        <operation name="XSLT: Create Trailer">
+          <participant name="FB_XSLT"/>
+          <output message="XSLTServiceTypeInputMessage">
+            <assign to="check_memory_requirements">FALSE</assign>
+            <assign to="incremental_transform">TRUE</assign>
+            <assign to="input_pd_xpath">/ProcessData</assign>
+            <assign to="xml_input_from">ProcData</assign>
+            <assign to="xml_input_validation">NO</assign>
+            <assign to="xslt_name">SFG_SCT_ICFFile_CreateTrailer</assign>
+            <assign to="PrimaryDocument" from="SFG_SCT_ICFFile/BundleDocument/@SCIObjectID"></assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/TrailerDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+          </input>
+        </operation>
+
+        <operation name="Get Document Infor: Get Trailer DocID">
+          <participant name="FB_GETDOCINFO"/>
+          <output message="GetDocumentInfoServiceTypeInputMessage">
+            <assign to="PrimaryDocument" from="SFG_SCT_ICFFile/TrailerDocument/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/ThreadDocList/DOC_ID" from="string(DocumentId)" append="true"></assign>
+          </input>
+        </operation>
+
+        <operation name="XML Encode: Create Merge List of Doc Ids">
+          <participant name="FB_XMLENCODER"/>
+          <output message="XMLEncoderTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="mode">process_data_to_document</assign>
+            <assign to="output_to_process_data">NO</assign>
+            <assign to="root_element">ThreadDocList</assign>
+            <assign to="xPath">SFG_SCT_ICFFile/ThreadDocList/*</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/ThreadDocuments" from="PrimaryDocument/@SCIObjectID"></assign>
+          </input>
+        </operation>
+
+        <operation name="FileBrokerDocMerge: Create Merged Document">
+          <participant name="FB_DOC_MERGE"/>
+          <output message="FileBrokerDocMergeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="DocIDNodeList">/ThreadDocList/DOC_ID</assign>
+            <assign to="DocumentName">MergedICFDocument</assign>
+            <assign to="DocumentSubType">text</assign>
+            <assign to="DocumentType">xml</assign>
+            <assign to="StopOnNoDocument">true</assign>
+            <assign to="PrimaryDocument" from="SFG_SCT_ICFFile/ThreadDocuments/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/BundleDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+      <sequence name="ICFMapping">
+        <operation name="Timestamp: Get Date for ICF Header">
+          <participant name="TimestampUtilService"/>
+          <output message="TimestampUtilServiceTypeInputMessage">
+            <assign to="action">current_time</assign>
+            <assign to="format">yyyy-MM-dd&apos;T&apos;HH:mm:ss&apos;.0Z&apos;</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/CurrentTimestamp" from="string(time)"></assign>
+          </input>
+        </operation>
+
+        <operation name="XSLT: Create Bulks">
+          <participant name="FB_XSLT"/>
+          <output message="XSLTServiceTypeInputMessage">
+            <assign to="additional_xslt_params" from="concat(&apos;MaxTrans=&apos;, SFG_SCT_ICFFile/Parameters/MAXTRANSPERBULK)"></assign>
+            <assign to="check_memory_requirements">FALSE</assign>
+            <assign to="incremental_transform">TRUE</assign>
+            <assign to="xml_input_from">PrimaryDoc</assign>
+            <assign to="xml_input_validation">NO</assign>
+            <assign to="xslt_name">SFG_SCT_ICFFile_Create_Bulks</assign>
+            <assign to="PrimaryDocument" from="SFG_SCT_ICFFile/BundleDocument/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/ICFDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+          </input>
+        </operation>
+
+        <operation name="XSLT: Create ICF">
+          <participant name="FB_XSLT"/>
+          <output message="XSLTServiceTypeInputMessage">
+            <assign to="additional_xslt_params" from="concat(&apos;MaxTrans=&apos;, SFG_SCT_ICFFile/Parameters/MAXTRANSPERBULK, &apos;=SndgInst=&apos;, SFG_SCT_ICFFile/Parameters/ENTITY, &apos;=RcvgInst=&apos;, SFG_SCT_ICFFile/RcvgInst, &apos;=FileRef=&apos;, SFG_SCT_ICFFile/Reference, &apos;=TestCode=&apos;, SFG_SCT_ICFFile/TestCode, &apos;=CurrentDate=&apos;, SFG_SCT_ICFFile/CurrentTimestamp)"></assign>
+            <assign to="check_memory_requirements">FALSE</assign>
+            <assign to="incremental_transform">TRUE</assign>
+            <assign to="xml_input_from">PrimaryDoc</assign>
+            <assign to="xml_input_validation">NO</assign>
+            <assign to="xslt_name">SFG_SCT_ICFFile_Create_ICF</assign>
+            <assign to="PrimaryDocument" from="SFG_SCT_ICFFile/ICFDocument/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/ICFDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+          </input>
+        </operation>
+
+        <onFault>
+          <sequence name="SCT16">
+            <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT16</assign>
+            <operation name="Invoke Throw Error">
+              <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+              <output message="InlineInvokeBPTypeInputMessage">
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </onFault>
+      </sequence>
+      <sequence name="ICFValidation">
+        <operation name="XML Validation: Validate ICF">
+          <participant name="FB_XML_VALIDATION"/>
+          <output message="XMLValidatorInputMessage">
+            <assign to="PrimaryDocument" from="SFG_SCT_ICFFile/ICFDocument/@SCIObjectID"></assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="LWJDBC: Get DB ICF Totals">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1" from="number(SFG_SCT_ICFFile/BundleID)"></assign>
+            <assign to="paramtype1">Integer</assign>
+            <assign to="sql">select count(*) as TRXCOUNT, TO_CHAR(sum(SETTLE_AMT), &apos;9999999999990.00&apos;) AS TRXSUM, TYPE FROM SCT_PAYMENT WHERE BUNDLE_ID=? AND STATUS=3 GROUP BY TYPE</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/DBTotals" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//row" append="true"></assign>
+          </input>
+        </operation>
+
+        <operation name="XSLT: Validate ICF Totals">
+          <participant name="FB_XSLT"/>
+          <output message="XSLTServiceTypeInputMessage">
+            <assign to="additional_xslt_params" from="concat(&apos;DB_TotalTrxCount_029=&apos;, if(string-length(normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;camt.029&apos;]/TRXCOUNT))=0,&apos;0&apos; ,normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;camt.029&apos;]/TRXCOUNT)), &apos;=DB_TotalTrxCount_056=&apos;, if(string-length(normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;camt.056&apos;]/TRXCOUNT))=0,&apos;0&apos; ,normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;camt.056&apos;]/TRXCOUNT)), &apos;=DB_TotalTrxCount_004=&apos;, if(string-length(normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;pacs.004&apos;]/TRXCOUNT))=0,&apos;0&apos; ,normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;pacs.004&apos;]/TRXCOUNT)), &apos;=DB_TotalTrxCount_008=&apos;, if(string-length(normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;pacs.008&apos;]/TRXCOUNT))=0,&apos;0&apos; ,normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;pacs.008&apos;]/TRXCOUNT)), &apos;=DB_TotalTrxSttlmAmt_004=&apos;, if(string-length(normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;pacs.004&apos;]/TRXSUM))=0,&apos;0.00&apos; ,normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;pacs.004&apos;]/TRXSUM)), &apos;=DB_TotalTrxSttlmAmt_008=&apos;, if(string-length(normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;pacs.008&apos;]/TRXSUM))=0,&apos;0.00&apos; ,normalize-space(SFG_SCT_ICFFile/DBTotals/row[TYPE=&apos;pacs.008&apos;]/TRXSUM)))"></assign>
+            <assign to="check_memory_requirements">FALSE</assign>
+            <assign to="incremental_transform">TRUE</assign>
+            <assign to="xml_input_from">PrimaryDoc</assign>
+            <assign to="xml_input_validation">NO</assign>
+            <assign to="xslt_name">SFG_SCT_ICF_Validate</assign>
+            <assign to="PrimaryDocument" from="SFG_SCT_ICFFile/ICFDocument/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/ICFValidationReport" from="PrimaryDocument/@SCIObjectID"></assign>
+            <assign to="SFG_SCT_ICFFile/ICFValidationStatus" from="DocToDOM(PrimaryDocument)//IcfValidated/text()"></assign>
+          </input>
+        </operation>
+
+        <choice name="ICFNotValidated?">
+          <select>
+            <case ref="ICFInvalid" activity="ICF Not Valid"/>
+          </select>
+
+          <sequence name="ICF Not Valid">
+            <operation name="LWJDBC: Get Bundle Error Code">
+              <participant name="FB_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param1" from="number(SFG_SCT_ICFFile/BundleID)"></assign>
+                <assign to="paramtype1">Integer</assign>
+                <assign to="sql">select ERROR FROM SCT_BUNDLE WHERE BUNDLE_ID=?</assign>
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="SFG_SCT_ICFFile/ICFValidateErrorCode" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//row[1]/ERROR/text()"></assign>
+              </input>
+            </operation>
+
+            <choice name="Allow Thru?">
+              <select>
+                <case ref="ICFInvalidAllowThru" negative="true" activity="InvalidAndStop"/>
+              </select>
+
+              <sequence name="InvalidAndStop">
+                <operation name="Business Process Exception">
+                  <participant name="FB_BPEXCEPTION"/>
+                  <output message="BPExceptionServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="exceptionCode">ICF Invalid: Refer to ICF Validation Report</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+              </sequence>
+            </choice>
+          </sequence>
+        </choice>
+        <operation name="LWJDBC: Update Bundle Status (4)">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1">4</assign>
+            <assign to="param2" from="number(SFG_SCT_ICFFile/BundleID)"></assign>
+            <assign to="paramtype1">Integer</assign>
+            <assign to="paramtype2">Integer</assign>
+            <assign to="query_type">UPDATE</assign>
+            <assign to="sql">UPDATE SCT_BUNDLE SET STATUS = ? WHERE BUNDLE_ID=?</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <onFault>
+          <sequence name="SCT28">
+            <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT28</assign>
+            <operation name="Invoke Throw Error">
+              <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+              <output message="InlineInvokeBPTypeInputMessage">
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </onFault>
+      </sequence>
+      <sequence name="ICF Outbound">
+        <operation name="Mailbox Add: Store ICF">
+          <participant name="FB_MAILBOXADD"/>
+          <output message="MailboxAddServiceTypeInputMessage">
+            <assign to="Extractable">YES</assign>
+            <assign to="MailboxPath" from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.mbx.in.ICF.&apos;, SFG_SCT_ICFFile/Parameters/ENTITY))"></assign>
+            <assign to="MessageName" from="string(SFG_SCT_ICFFile/Filename)"></assign>
+            <assign to="PrimaryDocument" from="SFG_SCT_ICFFile/ICFDocument/@SCIObjectID"></assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/ICFMessageID" from="string(MessageId)"></assign>
+          </input>
+        </operation>
+
+        <operation name="LWJDBC: Update Bundle Status (5)">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1">5</assign>
+            <assign to="param2" from="string(SFG_SCT_ICFFile/ICFMessageID)"></assign>
+            <assign to="param3" from="number(SFG_SCT_ICFFile/BundleID)"></assign>
+            <assign to="paramtype1">Integer</assign>
+            <assign to="paramtype2">Integer</assign>
+            <assign to="paramtype3">Integer</assign>
+            <assign to="query_type">UPDATE</assign>
+            <assign to="sql">UPDATE SCT_BUNDLE SET STATUS = ?, MESSAGE_ID=?  WHERE BUNDLE_ID=?</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <operation name="LWJDBC: Update Payment Status (100)">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1">100</assign>
+            <assign to="param2" from="number(SFG_SCT_ICFFile/BundleID)"></assign>
+            <assign to="paramtype1">Integer</assign>
+            <assign to="paramtype2">Integer</assign>
+            <assign to="query_type">UPDATE</assign>
+            <assign to="sql">UPDATE SCT_PAYMENT SET STATUS = ? WHERE BUNDLE_ID=?</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <operation name="Mailbox Add: Add for routing">
+          <participant name="FB_MAILBOXADD"/>
+          <output message="MailboxAddServiceTypeInputMessage">
+            <assign to="Extractable">YES</assign>
+            <assign to="MailboxPath">/FileBroker/SCT/Outbound</assign>
+            <assign to="MessageName" from="string(SFG_SCT_ICFFile/Filename)"></assign>
+            <assign to="PrimaryDocument" from="SFG_SCT_ICFFile/ICFDocument/@SCIObjectID"></assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="SFG_SCT_ICFFile/ICFMessageID" from="string(MessageId)"></assign>
+          </input>
+        </operation>
+
+        <onFault>
+          <sequence name="SCT18">
+            <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT18</assign>
+            <operation name="Invoke Throw Error">
+              <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+              <output message="InlineInvokeBPTypeInputMessage">
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </onFault>
+      </sequence>
+      <onFault>
+        <sequence name="SCT12">
+          <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT12</assign>
+          <operation name="Invoke Throw Error">
+            <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+            <output message="InlineInvokeBPTypeInputMessage">
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <onFault>
+      <sequence name="Handle Error">
+        <operation name="LWJDBC: Update Bundle as error">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1" from="string(SFG_ThrowError/ErrorCode[1])"></assign>
+            <assign to="param2" from="number(SFG_SCT_ICFFile/BundleID)"></assign>
+            <assign to="paramtype1">String</assign>
+            <assign to="paramtype2">Integer</assign>
+            <assign to="query_type">UPDATE</assign>
+            <assign to="sql">UPDATE SCT_BUNDLE SET STATUS = -STATUS, ERROR=? WHERE BUNDLE_ID=? AND STATUS &gt;=0</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="exceptionCode">Marking process as halted</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Release Service">
+          <participant name="FB_RELEASE"/>
+          <output message="ReleaseServiceTypeInputMessage">
+            <assign to="TARGET">SFG_SCT_ICFFile</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

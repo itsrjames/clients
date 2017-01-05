@@ -1,0 +1,270 @@
+<process name="FB_Async_CD_Thread">
+  <rule name="BatchRowsFound">
+    <condition>number(FB_Async_CD/BatchCount)&gt;0</condition>
+  </rule>
+
+  <rule name="CDNodesLeft">
+    <condition>string-length(FB_Async_CD/RemoteCDNode)&gt;0</condition>
+  </rule>
+
+  <sequence name="Async CD Thread">
+    <sequence name="Main">
+      <sequence name="SubFlow: Send files via CD">
+        <sequence name="CDSend">
+          <operation name="Assign: init">
+            <participant name="AssignService"/>
+            <output message="AssignServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="FB_Async_CD/UploadDir" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.UploadDir.Root&apos;))"></assign>
+              <assign to="FB_Async_CD/SubDir1" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.UploadDir.SubDir1&apos;))"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="BP Metadata: Get WFID">
+            <participant name="FB_BPMETADATA"/>
+            <output message="BPMetaDataServiceTypeInputMessage">
+            </output>
+            <input message="inmsg">
+              <assign to="FB_Async_CD/WFID" from="string(BPDATA/WORKFLOW_ID)"></assign>
+            </input>
+          </operation>
+
+          <operation name="JDBC: Identify batch">
+            <participant name="FB_LWJDBC"/>
+            <output message="LightweightJDBCAdapterTypeInputMessage">
+              <assign to="param1">1</assign>
+              <assign to="param2" from="string(FB_Async_CD/WFID)"></assign>
+              <assign to="param3" from="string(FB_Async_CD/WFID)"></assign>
+              <assign to="param4">0</assign>
+              <assign to="param5">0</assign>
+              <assign to="param6" from="string(FB_Async_CD/Snode)"></assign>
+              <assign to="param7" from="string(FB_Async_CD/BatchSize)"></assign>
+              <assign to="paramtype1">Integer</assign>
+              <assign to="paramtype2">Long</assign>
+              <assign to="paramtype3">String</assign>
+              <assign to="paramtype4">Integer</assign>
+              <assign to="paramtype5">Integer</assign>
+              <assign to="paramtype6">String</assign>
+              <assign to="paramtype7">Integer</assign>
+              <assign to="query_type">UPDATE</assign>
+              <assign to="sql">UPDATE FB_ASYNC_CD SET STATUS=?, ASYNC_WFID=?, BATCH_ID=?, LAST_MODIFIED=sysdate WHERE ASYNC_CD_ID IN ( SELECT ASYNC_CD_ID FROM  ( SELECT ASYNC_CD_ID FROM FB_ASYNC_CD WHERE ARCHIVED=? AND STATUS=? AND SNODE=? ORDER BY ASYNC_CD_ID ASC ) WHERE ROWNUM &lt;=? )</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="FB_Async_CD/BatchCount" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row/Rows_Affected/text()"></assign>
+            </input>
+          </operation>
+
+          <choice name="RowsFound?">
+            <select>
+              <case ref="BatchRowsFound" activity="ProcessBatch"/>
+            </select>
+
+            <sequence name="ProcessBatch">
+              <operation name="JDBC: Get Batch Details">
+                <participant name="FB_LWJDBC"/>
+                <output message="LightweightJDBCAdapterTypeInputMessage">
+                  <assign to="param1" from="string(FB_Async_CD/WFID)"></assign>
+                  <assign to="param2">0</assign>
+                  <assign to="param3">1</assign>
+                  <assign to="paramtype1">String</assign>
+                  <assign to="paramtype2">Integer</assign>
+                  <assign to="paramtype3">Integer</assign>
+                  <assign to="result_name">Files</assign>
+                  <assign to="row_name">File</assign>
+                  <assign to="sql">SELECT ASYNC_CD_ID, FILENAME, DOCUMENT_ID, DELIVERY_KEY, DATAFLOW_ID  FROM FB_ASYNC_CD WHERE BATCH_ID=? AND ARCHIVED=? AND STATUS=? ORDER BY ASYNC_CD_ID ASC</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="FB_Async_CD/FileList" from="PrimaryDocument/@SCIObjectID"></assign>
+                </input>
+              </operation>
+
+              <assign name="Assign" to="FB_Async_CD/RemoteCDNodeList" from="concat(sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.RemoteCDNode&apos;)), &apos;,&apos;)"></assign>
+              <assign name="Assign" to="FB_Async_CD/RemoteCDNode" from="substring-before(FB_Async_CD/RemoteCDNodeList,&apos;,&apos;)"></assign>
+              <sequence name="FailoverSeq">
+                <choice name="CDNodesLeft?">
+                  <select>
+                    <case ref="CDNodesLeft" activity="CDConnect"/>
+                    <case ref="CDNodesLeft" negative="true" activity="CDError"/>
+                  </select>
+
+                  <sequence name="CDConnect">
+                    <operation name="CD Begin Session: Connect to Remote Node">
+                      <participant name="FB_CD_BEGIN_SESSION"/>
+                      <output message="CDServerBeginSessionServiceTypeInputMessage">
+                        <assign to="BeginSessionMaxRetries" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.Retries&apos;))"></assign>
+                        <assign to="BeginSessionRetryInterval" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.RetryInterval&apos;))"></assign>
+                        <assign to="LocalCDNodeName" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.PnodeAdapter&apos;))"></assign>
+                        <assign to="LocalUserId" from="string(FB_Async_CD/Submitter)"></assign>
+                        <assign to="PlexClass" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.PlexClass&apos;))"></assign>
+                        <assign to="RemoteCDNodeName" from="string(FB_Async_CD/RemoteCDNode)"></assign>
+                        <assign to="ShortTermMaxRetries" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.STRetries&apos;))"></assign>
+                        <assign to="ShortTermRetryInterval" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.STRetryInterval&apos;))"></assign>
+                        <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                      </output>
+                      <input message="inmsg">
+                        <assign to="FB_Async_CD/SessionToken" from="SessionToken/*"></assign>
+                      </input>
+                    </operation>
+
+                    <onFault>
+                      <sequence name="CDFailover">
+                        <assign to="FB_Async_CD/RemoteCDNode" from="substring-before(substring-after(FB_Async_CD/RemoteCDNodeList,concat(FB_Async_CD/RemoteCDNode, &apos;,&apos;)),&apos;,&apos;)"></assign>
+                        <repeat name="Return to FailoverSeq" ref="FailoverSeq"/>
+
+                      </sequence>
+                    </onFault>
+                  </sequence>
+                  <sequence name="CDError">
+                    <operation name="Business Process Exception">
+                      <participant name="FB_BPEXCEPTION"/>
+                      <output message="BPExceptionServiceTypeInputMessage">
+                        <assign to="." from="*"></assign>
+                        <assign to="exceptionCode">C:D Connection Error</assign>
+                        <assign to="statusReport">Cannot connect to Remote C:D Node. All retries and failover nodes have been exhausted.</assign>
+                      </output>
+                      <input message="inmsg">
+                        <assign to="." from="*"></assign>
+                      </input>
+                    </operation>
+
+                  </sequence>
+                </choice>
+              </sequence>
+              <sequence name="CD Session">
+                <operation name="Invoke CD Process (Inline)">
+                  <participant name="FB_INVOKE_SUBPROCESS"/>
+                  <output message="InvokeSubProcessServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="INVOKE_MODE">INLINE</assign>
+                    <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+                    <assign to="WFD_NAME" from="sci-get-property(&apos;fbasynccd&apos;, concat(FB_Async_CD/Snode, &apos;.CDProcess&apos;))"></assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+                <onFault>
+                  <sequence name="Close CD Session">
+                    <operation name="CD Server End Session Service">
+                      <participant name="FB_CD_END_SESSION"/>
+                      <output message="CDServerEndSessionServiceTypeInputMessage">
+                        <assign to="SessionToken" from="FB_Async_CD/SessionToken/*"></assign>
+                      </output>
+                      <input message="inmsg">
+                      </input>
+                    </operation>
+
+                    <operation name="Business Process Exception">
+                      <participant name="FB_BPEXCEPTION"/>
+                      <output message="BPExceptionServiceTypeInputMessage">
+                        <assign to="." from="*"></assign>
+                        <assign to="exceptionCode">Continuing error state after closing CD Session</assign>
+                      </output>
+                      <input message="inmsg">
+                        <assign to="." from="*"></assign>
+                      </input>
+                    </operation>
+
+                  </sequence>
+                </onFault>
+              </sequence>
+              <sequence name="End Session">
+                <operation name="CD Server End Session Service">
+                  <participant name="FB_CD_END_SESSION"/>
+                  <output message="CDServerEndSessionServiceTypeInputMessage">
+                    <assign to="SessionToken" from="FB_Async_CD/SessionToken/*"></assign>
+                  </output>
+                  <input message="inmsg">
+                  </input>
+                </operation>
+
+                <onFault>
+                  <sequence name="CDCloseErr">
+                    <assign name="Assign" to="CDCloseErrorHandled">true</assign>
+                  </sequence>
+                </onFault>
+              </sequence>
+              <onFault>
+                <sequence name="Rollback Batch">
+                  <operation name="JDBC: Set status back to 0">
+                    <participant name="FB_LWJDBC"/>
+                    <output message="LightweightJDBCAdapterTypeInputMessage">
+                      <assign to="param1">0</assign>
+                      <assign to="param2" from="string(FB_Async_CD/WFID)"></assign>
+                      <assign to="param3" from="string(FB_Async_CD/WFID)"></assign>
+                      <assign to="param4">1</assign>
+                      <assign to="param5">0</assign>
+                      <assign to="paramtype1">Integer</assign>
+                      <assign to="paramtype2">Long</assign>
+                      <assign to="paramtype3">String</assign>
+                      <assign to="paramtype4">Integer</assign>
+                      <assign to="paramtype5">Integer</assign>
+                      <assign to="query_type">UPDATE</assign>
+                      <assign to="sql">UPDATE FB_ASYNC_CD SET STATUS=?, ASYNC_WFID=?, LAST_MODIFIED=sysdate WHERE BATCH_ID=? AND STATUS=? AND ARCHIVED=?</assign>
+                    </output>
+                    <input message="inmsg">
+                    </input>
+                  </operation>
+
+                  <operation name="JDBC: Set ArrivedFile as Routing">
+                    <participant name="FB_LWJDBC"/>
+                    <output message="LightweightJDBCAdapterTypeInputMessage">
+                      <assign to="param1">Routing</assign>
+                      <assign to="param2" from="string(FB_Async_CD/WFID)"></assign>
+                      <assign to="param3">0</assign>
+                      <assign to="param4">0</assign>
+                      <assign to="paramtype1">String</assign>
+                      <assign to="paramtype2">String</assign>
+                      <assign to="paramtype3">Integer</assign>
+                      <assign to="paramtype4">Integer</assign>
+                      <assign to="query_type">UPDATE</assign>
+                      <assign to="sql">UPDATE FG_ARRIVEDFILE SET STATE=? WHERE ARRIVEDFILE_KEY IN ( SELECT r.ARRIVEDFILE_KEY FROM FG_ROUTE r, FG_DELIVERY d WHERE r.ROUTE_KEY=d.ROUTE_KEY and d.DELIVERY_KEY IN ( SELECT DELIVERY_KEY FROM FB_ASYNC_CD WHERE BATCH_ID=? AND STATUS=? AND ARCHIVED=? ) )</assign>
+                    </output>
+                    <input message="inmsg">
+                    </input>
+                  </operation>
+
+                  <operation name="Business Process Exception">
+                    <participant name="FB_BPEXCEPTION"/>
+                    <output message="BPExceptionServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="exceptionCode">Rollback of batch successful</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </onFault>
+            </sequence>
+          </choice>
+        </sequence>
+      </sequence>
+      <onFault>
+        <sequence name="FBK021">
+          <operation name="FileBrokerEvent">
+            <participant name="FB_FILEBROKER_EVENT"/>
+            <output message="FileBrokerEventInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="EventCode">FBK021</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <onFault>
+      <sequence name="HandeLockError">
+        <assign name="Assign" to="ErrorHandled">true</assign>
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

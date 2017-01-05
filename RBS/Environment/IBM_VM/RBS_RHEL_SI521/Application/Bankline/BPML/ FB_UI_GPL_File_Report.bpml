@@ -1,0 +1,89 @@
+<process name="FB_UI_GPL_File_Report">
+  <rule name="CSVOutput">
+    <condition>translate(output/text(), &apos;CSV&apos;, &apos;csv&apos;)=&apos;csv&apos;</condition>
+  </rule>
+
+  <rule name="PDFOutput">
+    <condition>translate(output/text(), &apos;PDF&apos;, &apos;pdf&apos;)=&apos;pdf&apos;</condition>
+  </rule>
+
+  <sequence name="REPORT_SEQ">
+    <operation name="LWJDBC Get GPL File Data">
+      <participant name="LightweightJDBCAdapterQuery"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="param2" from="string(reportend)"></assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="query_type">SELECT</assign>
+        <assign to="param1" from="string(reportstart)"></assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="row_name">row</assign>
+        <assign to="sql">SELECT * FROM FB_FILE WHERE LAST_MODIFIED&gt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;) and LAST_MODIFIED&lt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;)</assign>
+        <assign to="pool">oraclePool</assign>
+        <assign to="result_name">result</assign>
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <choice name="OutputType?">
+      <select>
+        <case ref="CSVOutput" activity="CSV"/>
+        <case ref="PDFOutput" activity="PDF"/>
+      </select>
+
+      <sequence name="CSV">
+        <operation name="XSLT: Convert to CSV">
+          <participant name="XSLTService"/>
+          <output message="XSLTServiceTypeInputMessage">
+            <assign to="xslt_name">FB_GPLFile_CSV</assign>
+            <assign to="xml_input_from">PrimaryDoc</assign>
+            <assign to="xml_input_validation">NO</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+      <sequence name="PDF">
+        <operation name="XSLT: Convert to FO">
+          <participant name="XSLTService"/>
+          <output message="XSLTServiceTypeInputMessage">
+            <assign to="xslt_name">FB_GPLFile_FO</assign>
+            <assign to="xml_input_from">PrimaryDoc</assign>
+            <assign to="additional_xslt_params" from="concat(&apos;reportstart=&apos;, reportstart, &apos;=reportend=&apos;, reportend)"></assign>
+            <assign to="xml_input_validation">NO</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="XSLFO: Create PDF">
+          <participant name="FB_XSLFO_SG"/>
+          <output message="XSLFOInputMessage">
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+    <operation name="Business Process Response Service Type">
+      <participant name="BusinessProcessResponseService"/>
+      <output message="BusinessProcessResponseServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+  </sequence>
+</process>

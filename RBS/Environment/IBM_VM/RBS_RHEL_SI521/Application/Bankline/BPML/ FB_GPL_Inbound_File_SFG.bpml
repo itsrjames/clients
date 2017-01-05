@@ -1,0 +1,108 @@
+<process name="FB_GPL_Inbound_File_SFG">
+  <sequence name="SFG Inbound File">
+    <operation name="Assign: Set static channel values">
+      <participant name="AssignService"/>
+      <output message="AssignServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="GPL/Channel">SFG</assign>
+        <assign to="GPL/CSID" from="sci-get-property(&apos;fbgpl&apos;, &apos;FSN.Unknown.CSID&apos;)"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="FB Regex: read the filename">
+      <participant name="FB_FILEBROKER_REGEX"/>
+      <output message="FileBrokerRegexInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="Defaults">,PROPT,PM,N</assign>
+        <assign to="Regex">^([a-zA-Z0-9]{11})[.]([a-zA-Z0-9]{5})[.]([a-zA-Z]{2})([.][gG][zZ]|[.][nN]|[.][zZ][iI][pP]){0,}$</assign>
+        <assign to="Output">DCGRef,Format,Type,Extension</assign>
+        <assign to="Input" from="string(RFilename)"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="GPL" from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="JDBC: Query SA">
+      <participant name="FB_SA_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="param2">RESPONSE_AREA</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="query_type">PROCEDURE</assign>
+        <assign to="param1" from="string(GPL/DCGRef)"></assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;SASchema&apos;), &apos;.YJSC14_SWTFACTCUST(?,?)&apos;)"></assign>
+        <assign to="paramDirection2">OUT</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="GPL/DSigFormat" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;IMPDSGFT&apos;][1]/SERVICE_DETAIL/text()"></assign>
+        <assign to="GPL/DuplicateCheck" from="boolean(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;FPAURJDP&apos;][1]/SERVICE_DETAIL[1]=&apos;Y&apos;)"></assign>
+        <assign to="GPL/CSID" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CESD_CUSTOMER_ID/text()"></assign>
+        <assign to="GPL/ChannelAllowed" from="boolean(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;SNTFLACT&apos;][1]/SERVICE_DETAIL[1]=&apos;Y&apos;)"></assign>
+        <assign to="GPL/Nonunique" from="count(DocToDOM(PrimaryDocument, &apos;false&apos;)/row)-3"></assign>
+        <assign to="GPL/EndDue" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/END_DUE/text()"></assign>
+        <assign to="GPL/Status" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATUS_CODE/text()"></assign>
+        <assign to="GPL/StartDue" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/START_DUE/text()"></assign>
+        <assign to="GPL/CREF" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUST_AGMT_REF/text()"></assign>
+        <assign to="YJSC14Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+      </input>
+    </operation>
+
+    <operation name="Invoke FB_GPL_Inbound_Validation (inline)">
+      <participant name="FB_INVOKE_SUBPROCESS"/>
+      <output message="InvokeSubProcessServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="INVOKE_MODE">INLINE</assign>
+        <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+        <assign to="WFD_NAME">FB_GPL_Inbound_Validation</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <sequence name="Type / Format Lookup">
+      <operation name="Assign: Get Property for File Type and Format">
+        <participant name="AssignService"/>
+        <output message="AssignServiceTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="GPL/Description" from="sci-get-property(&apos;fbgpl&apos;, concat(&apos;Inbound.&apos;, GPL/Format, &apos;.&apos;, GPL/Type))"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <onFault>
+        <sequence name="Invalid Type / Format">
+          <operation name="Assign: Set GPL Rejection Report">
+            <participant name="AssignService"/>
+            <output message="AssignServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="GPL/RRCode">GPL_RR01</assign>
+              <assign to="GPL/RRReport">Format and/or Type are not valid for a GPL file</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Business Process Exception">
+            <participant name="FB_BPEXCEPTION"/>
+            <output message="BPExceptionServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="exceptionCode" from="concat(&apos;[&apos;, GPL/RRCode, &apos;] &apos;, GPL/RRReport)"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+  </sequence>
+</process>

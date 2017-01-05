@@ -1,0 +1,302 @@
+<process name="FB_CDWTO_Delivery">
+  <rule name="PULLOperation">
+    <condition>translate(CDWTO/Operation, &apos;pull&apos;, &apos;PULL&apos;)=&apos;PULL&apos;</condition>
+  </rule>
+
+  <rule name="PUSHOperation">
+    <condition>translate(CDWTO/Operation, &apos;push&apos;, &apos;PUSH&apos;)=&apos;PUSH&apos;</condition>
+  </rule>
+
+  <sequence name="CDWTO Delivery">
+    <sequence name="MailboxPath Mapping">
+      <sequence name="GetCDWTO ID">
+        <assign name="Assign" to="CDWTO/ID" from="sci-get-property(&apos;fbcdwto&apos;, concat(&apos;CDWTO.&apos;, FG/MailboxPath))"></assign>
+        <onFault code="Property not found">
+          <sequence name="NoID">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">CDWTO Delivery Not Required</assign>
+                <assign to="statusReport">No CDWTO Mapping found. File will not be delivered via CDWTO protocol and will be set with a routed status.</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </onFault>
+      </sequence>
+      <operation name="Assign: Load details">
+        <participant name="AssignService"/>
+        <output message="AssignServiceTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="CDWTO/Submitter" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.Submitter&apos;))"></assign>
+          <assign to="CDWTO/PNodeAdapter" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PnodeAdapter&apos;))"></assign>
+          <assign to="CDWTO/RemoteCDNode" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.RemoteCDNode&apos;))"></assign>
+          <assign to="CDWTO/PlexClass" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PlexClass&apos;))"></assign>
+          <assign to="CDWTO/Retries" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.Retries&apos;))"></assign>
+          <assign to="CDWTO/RetryInterval" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.RetryInterval&apos;))"></assign>
+          <assign to="CDWTO/STRetryInterval" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.STRetries&apos;))"></assign>
+          <assign to="CDWTO/STRetries" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.STRetryInterval&apos;))"></assign>
+          <assign to="CDWTO/Program" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.Program&apos;))"></assign>
+          <assign to="CDWTO/Operation" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.Operation&apos;))"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <operation name="This: Create SysOpts">
+        <participant name="This"/>
+        <output message="assignRequest">
+          <assign to="." from="*"></assign>
+          <assign to="to">CDWTO/SysOpts</assign>
+          <assign to="from" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.SysOptsXpath&apos;))"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <operation name="CD Server Begin Session: Connect to Remote Node">
+        <participant name="FB_CD_BEGIN_SESSION"/>
+        <output message="CDServerBeginSessionServiceTypeInputMessage">
+          <assign to="ShortTermRetryInterval" from="string(CDWTO/STRetryInterval)"></assign>
+          <assign to="BeginSessionRetryInterval" from="string(CDWTO/RetryInterval)"></assign>
+          <assign to="BeginSessionMaxRetries" from="string(CDWTO/Retries)"></assign>
+          <assign to="RemoteCDNodeName" from="string(CDWTO/RemoteCDNode)"></assign>
+          <assign to="ShortTermMaxRetries" from="string(CDWTO/STRetries)"></assign>
+          <assign to="PlexClass" from="string(CDWTO/PlexClass)"></assign>
+          <assign to="LocalCDNodeName" from="string(CDWTO/PNodeAdapter)"></assign>
+          <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+          <assign to="LocalUserId" from="string(CDWTO/Submitter)"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="CDWTO/SessionToken" from="SessionToken/*"></assign>
+        </input>
+      </operation>
+
+      <sequence name="Execute WTO">
+        <choice name="Operation?">
+          <select>
+            <case ref="PULLOperation" activity="PULL"/>
+            <case ref="PUSHOperation" activity="PUSH"/>
+          </select>
+
+          <sequence name="PULL">
+            <assign name="Assign" to="CDWTO/Mailbox" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PULL.CollectionMailbox&apos;))"></assign>
+            <operation name="Mailbox Add: Store for collection">
+              <participant name="FB_MAILBOXADD"/>
+              <output message="MailboxAddServiceTypeInputMessage">
+                <assign to="MessageName" from="string(DestinationMessageName)"></assign>
+                <assign to="ExtractableCount">1</assign>
+                <assign to="MailboxPath" from="string(CDWTO/Mailbox)"></assign>
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="CDWTO/MessageId" from="string(MessageId)"></assign>
+              </input>
+            </operation>
+
+            <operation name="JDBC: Add to Defer Delivery">
+              <participant name="FB_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="param2">CDWTO</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="paramtype3">Integer</assign>
+                <assign to="param3" from="string(CDWTO/MessageId)"></assign>
+                <assign to="paramtype4">String</assign>
+                <assign to="param4" from="string(FG/DeliveryKey)"></assign>
+                <assign to="query_type">INSERT</assign>
+                <assign to="param1" from="string(CDWTO/MessageId)"></assign>
+                <assign to="paramtype1">String</assign>
+                <assign to="sql">INSERT INTO FB_DEFER_DELIVERY(DEFER_KEY, DEFER_TYPE, MESSAGE_ID, DELIVERY_KEY, CONSUMER_FILENAME, DEFER_WFID, ARCHIVED, CREATED, LAST_MODIFIED) VALUES(?,?,?,?,?,?,?,sysdate,sysdate)</assign>
+                <assign to="param7">0</assign>
+                <assign to="paramtype6">Integer</assign>
+                <assign to="param6" from="string(FG/WorkflowId)"></assign>
+                <assign to="paramtype7">Integer</assign>
+                <assign to="paramtype5">String</assign>
+                <assign to="param5" from="string(DestinationMessageName)"></assign>
+              </output>
+              <input message="inmsg">
+              </input>
+            </operation>
+
+            <operation name="CD Server Run Task: Execute WTO">
+              <participant name="FB_CD_RUN_TASK"/>
+              <output message="CDServerRunTaskServiceTypeInputMessage">
+                <assign to="Program" from="string(CDWTO/Program)"></assign>
+                <assign to="SystemOpts" from="string(CDWTO/SysOpts)"></assign>
+                <assign to="SessionToken" from="CDWTO/SessionToken/*"></assign>
+                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="FG Route Event: FB_8002">
+              <participant name="FileGatewayRouteEventService"/>
+              <output message="FileGatewayRouteEventServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="EventAttributes/Filename" from="string(DestinationMessageName)" append="true"></assign>
+                <assign to="EventAttributes/CDWTO" from="string(CDWTO/ID)" append="true"></assign>
+                <assign to="EventCode">FB_8002</assign>
+                <assign to="ExceptionLevel">Normal</assign>
+                <assign to="EventAttributes/Mailbox" from="string(CDWTO/Mailbox)" append="true"></assign>
+                <assign to="EventAttributes/MessageId" from="string(CDWTO/MessageId)" append="true"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+          <sequence name="PUSH">
+            <operation name="This: Create RemoteFilename">
+              <participant name="This"/>
+              <output message="assignRequest">
+                <assign to="." from="*"></assign>
+                <assign to="to">CDWTO/RemoteFilename</assign>
+                <assign to="from" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.RemoteFilenameXpath&apos;))"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="CD Server CopyTo Service">
+              <participant name="FB_CD_COPYTO"/>
+              <output message="CDServerCopyToServiceTypeInputMessage">
+                <assign to="CDRecordType" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.CDRecordType&apos;))"></assign>
+                <assign to="BinaryMode" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.Binary&apos;))"></assign>
+                <assign to="Sysopts" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.SysOpts&apos;))"></assign>
+                <assign to="LocalFromCodePage" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.LocalFromCodePage&apos;))"></assign>
+                <assign to="CDDisposition" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.Disposition&apos;))"></assign>
+                <assign to="DCB" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.DCB&apos;))"></assign>
+                <assign to="LocalToCodePage" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.LocalToCodePage&apos;))"></assign>
+                <assign to="LocalStripBlanks" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.LocalStripBlanks&apos;))"></assign>
+                <assign to="SessionToken" from="CDWTO/SessionToken/*"></assign>
+                <assign to="Compression" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.Compression&apos;))"></assign>
+                <assign to="LocalXlate" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.LocalXlate&apos;))"></assign>
+                <assign to="RemoteFileName" from="string(CDWTO/RemoteFilename)"></assign>
+                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+              </output>
+              <input message="inmsg">
+              </input>
+            </operation>
+
+            <!--<operation name="CD Server Run Task: Execute WTO">
+              <participant name="FB_CD_RUN_TASK"/>
+              <output message="CDServerRunTaskServiceTypeInputMessage">
+                <assign to="Program" from="string(CDWTO/Program)"></assign>
+                <assign to="SystemOpts" from="string(CDWTO/SysOpts)"></assign>
+                <assign to="SessionToken" from="CDWTO/SessionToken/*"></assign>
+                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>-->
+
+            <operation name="FG Route Event: FB_8004">
+              <participant name="FileGatewayRouteEventService"/>
+              <output message="FileGatewayRouteEventServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="EventAttributes/Filename" from="string(DestinationMessageName)" append="true"></assign>
+                <assign to="EventAttributes/CDWTO" from="string(CDWTO/ID)" append="true"></assign>
+                <assign to="EventCode">FB_8004</assign>
+                <assign to="ExceptionLevel">Normal</assign>
+                <assign to="EventAttributes/RemoteFilename" from="string(CDWTO/RemoteFilename)" append="true"></assign>
+                <assign to="EventAttributes/SNODE" from="string(CDWTO/RemoteCDNode)" append="true"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+        <onFault>
+          <sequence name="Handle RunTask error">
+            <operation name="CD Server End Session Service">
+              <participant name="FB_CD_END_SESSION"/>
+              <output message="CDServerEndSessionServiceTypeInputMessage">
+                <assign to="SessionToken" from="CDWTO/SessionToken/*"></assign>
+              </output>
+              <input message="inmsg">
+              </input>
+            </operation>
+
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">Continuing error state after closing CD Session</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </onFault>
+      </sequence>
+      <sequence name="Close CD Session">
+        <operation name="CD Server End Session Service">
+          <participant name="FB_CD_END_SESSION"/>
+          <output message="CDServerEndSessionServiceTypeInputMessage">
+            <assign to="SessionToken" from="CDWTO/SessionToken/*"></assign>
+            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <onFault>
+          <sequence name="CloseSessionError">
+            <assign name="Assign" to="CloseSessionError">Handle</assign>
+          </sequence>
+        </onFault>
+      </sequence>
+      <onFault code="CDWTO Delivery Not Required">
+        <sequence name="NoMapping">
+          <assign name="Assign" to="SkipToEnd">true</assign>
+        </sequence>
+      </onFault>
+    </sequence>
+    <onFault>
+      <sequence name="FB_8052">
+        <operation name="FG Route Event: FB_8052">
+          <participant name="FileGatewayRouteEventService"/>
+          <output message="FileGatewayRouteEventServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventAttributes/Filename" from="string(DestinationMessageName)" append="true"></assign>
+            <assign to="EventAttributes/CDWTO" from="string(CDWTO/ID)" append="true"></assign>
+            <assign to="EventCode">FB_8052</assign>
+            <assign to="ExceptionLevel">Abnormal</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode" from="string(Prev_NotSuccess_Adv_Status)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

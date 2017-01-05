@@ -1,0 +1,533 @@
+<process name="FB_GPL_Inbound_File">
+  <rule name="GZipped">
+    <condition>translate(GPL/Extension, &apos;gz&apos;, &apos;GZ&apos;)=&apos;.GZ&apos;</condition>
+  </rule>
+
+  <rule name="Zipped">
+    <condition>translate(GPL/Extension, &apos;zip&apos;, &apos;ZIP&apos;)=&apos;.ZIP&apos;</condition>
+  </rule>
+
+  <rule name="RegisterAfterRejection">
+    <condition>string-length(GPL/RRCode)&gt;0 and string(GPL/Registered)!=&apos;true&apos;</condition>
+  </rule>
+
+  <rule name="SMIMEDsigFormat">
+    <condition>string(GPL/DSigFormat)=&apos;2&apos; or string(GPL/DSigFormat)=&apos;3&apos; or string(GPL/DSigFormat)=&apos;4&apos;</condition>
+  </rule>
+
+  <rule name="IsRejection">
+    <condition>string-length(GPL/RRCode)&gt;0</condition>
+  </rule>
+
+  <rule name="Certificates Present">
+    <condition>number(GPL/CertificateCount)&gt;0</condition>
+  </rule>
+
+  <rule name="TrustedCertsLeft">
+    <condition>count(TrustedCerts/TrustedCert)&gt;=number(TrustedCerts/LoopCounter) 
+and number(TrustedCerts/LoopCounter)&gt;0
+and number(TrustedCerts/InvalidCount)&gt;0</condition>
+  </rule>
+
+  <rule name="NoTrustedCertsLeft">
+    <condition>(count(TrustedCerts/TrustedCert)&lt;number(TrustedCerts/LoopCounter) and number(TrustedCerts/LoopCounter)&gt;0)
+or
+(number(TrustedCerts/InvalidCount)=0 and number(TrustedCerts/LoopCounter)&gt;0)</condition>
+  </rule>
+
+  <rule name="UnknownDsigFormat">
+    <condition>string(GPL/DSigFormat)!=&apos;1&apos; and 
+string(GPL/DSigFormat)!=&apos;2&apos; and
+string(GPL/DSigFormat)!=&apos;3&apos; and 
+string(GPL/DSigFormat)!=&apos;4&apos;</condition>
+  </rule>
+
+  <sequence name="GPLInbound">
+    <sequence name="Process File">
+      <operation name="Invoke Handler Process (inline)">
+        <participant name="FB_INVOKE_SUBPROCESS"/>
+        <output message="InvokeSubProcessServiceTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="INVOKE_MODE">INLINE</assign>
+          <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+          <assign to="WFD_NAME" from="string(HandlerProcess)"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <operation name="FG Route Event: FB_8060">
+        <participant name="FileGatewayRouteEventService"/>
+        <output message="FileGatewayRouteEventServiceTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="EventAttributes/CSID" from="string(GPL/CSID)" append="true"></assign>
+          <assign to="EventAttributes/Filename" from="string(PFilename)" append="true"></assign>
+          <assign to="EventAttributes/Format" from="string(GPL/Format)" append="true"></assign>
+          <assign to="EventAttributes/Type" from="string(GPL/Type)" append="true"></assign>
+          <assign to="EventCode">FB_8010</assign>
+          <assign to="ExceptionLevel">Normal</assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <sequence name="SubFlow: Decompress">
+        <sequence name="Decompress">
+          <choice name="Compressed?">
+            <select>
+              <case ref="GZipped" activity="GunZip"/>
+              <case ref="Zipped" activity="Unzip"/>
+            </select>
+
+            <sequence name="GunZip">
+              <operation name="GZIP: Gunzip">
+                <participant name="FB_GZIP"/>
+                <output message="GZIPInputMessage">
+                  <assign to="compression_action">Decompress</assign>
+                  <assign to="file_name" from="string(PFilename)"></assign>
+                  <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                  <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                </input>
+              </operation>
+
+              <onFault>
+                <sequence name="Gunzip GPL_RR03">
+                  <operation name="Assign: Set GPL_RR03">
+                    <participant name="AssignService"/>
+                    <output message="AssignServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="GPL/RRCode">GPL_RR03</assign>
+                      <assign to="GPL/RRReport">Invalid GZIP file</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                  <operation name="Business Process Exception">
+                    <participant name="FB_BPEXCEPTION"/>
+                    <output message="BPExceptionServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="exceptionCode" from="concat(&apos;[&apos;, GPL/RRCode, &apos;] &apos;, GPL/RRReport)"></assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </onFault>
+            </sequence>
+            <sequence name="Unzip">
+              <operation name="Compression: Unzip">
+                <participant name="FB_ZIP"/>
+                <output message="compressionInputMessage">
+                  <assign to="compression_type">Deflate</assign>
+                  <assign to="compression_action">Decompress</assign>
+                  <assign to="decompress_result">primary_doc</assign>
+                  <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                  <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                </input>
+              </operation>
+
+              <onFault>
+                <sequence name="Unzip GPL_RR03">
+                  <operation name="Assign: Set GPL_RR03">
+                    <participant name="AssignService"/>
+                    <output message="AssignServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="GPL/RRCode">GPL_RR03</assign>
+                      <assign to="GPL/RRReport">Invalid ZIP file</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                  <operation name="Business Process Exception">
+                    <participant name="FB_BPEXCEPTION"/>
+                    <output message="BPExceptionServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="exceptionCode" from="concat(&apos;[&apos;, GPL/RRCode, &apos;] &apos;, GPL/RRReport)"></assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </onFault>
+            </sequence>
+          </choice>
+        </sequence>
+      </sequence>
+      <sequence name="SubFlow: Digital Signature">
+        <sequence name="Verify Dsig">
+          <choice name="DSig Format?">
+            <select>
+              <case ref="SMIMEDsigFormat" activity="SMIME"/>
+              <case ref="UnknownDsigFormat" activity="Unknown"/>
+            </select>
+
+            <sequence name="SMIME">
+              <sequence name="SubFlow: Process SMIME">
+                <sequence name="SMIME Signed">
+                  <operation name="JDBC: get SA Thubmprints">
+                    <participant name="FB_SA_LWJDBC"/>
+                    <output message="LightweightJDBCAdapterTypeInputMessage">
+                      <assign to="param2">1</assign>
+                      <assign to="paramtype2">String</assign>
+                      <assign to="param3">RESPONSE_AREA</assign>
+                      <assign to="paramtype3">String</assign>
+                      <assign to="query_type">PROCEDURE</assign>
+                      <assign to="param1" from="string(GPL/CREF)"></assign>
+                      <assign to="paramtype1">Double</assign>
+                      <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;SASchema&apos;), &apos;.YJSC12_GETCUSTCERT(?,?,?)&apos;)"></assign>
+                      <assign to="paramDirection3">OUT</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="RegisteredThumbprints" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row/*"></assign>
+                      <assign to="YJSC12Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+                    </input>
+                  </operation>
+
+                  <operation name="SMIMEPreprocessor">
+                    <participant name="FB_SMIME_PREPROCESSOR"/>
+                    <output message="SMIMEPreprocessorInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="ThumbprintListXpath">/ProcessData/RegisteredThumbprints/*</assign>
+                      <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                      <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="TrustedCerts"></assign>
+                      <assign to="GPL/CertificateCount" from="string(CertificateCount)"></assign>
+                      <assign to="GPL/TrustedCertList" from="string(TrustedCertList)"></assign>
+                    </input>
+                  </operation>
+
+                  <choice name="Embedded Certificates?">
+                    <select>
+                      <case ref="Certificates Present" activity="Embedded Certificate"/>
+                      <case ref="Certificates Present" negative="true" activity="No certificate / too large"/>
+                    </select>
+
+                    <sequence name="Embedded Certificate">
+                      <operation name="CMS: verify signature">
+                        <participant name="FB_SMIME"/>
+                        <output message="CryptoMsgServiceInputMessage">
+                          <assign to="." from="*"></assign>
+                          <assign to="action">parse</assign>
+                          <assign to="pipelineTimeout" from="sci-get-property(&apos;fbgpl&apos;, &apos;SMIME.Pipeline.Timeout&apos;)"></assign>
+                          <assign to="verifyCerts" from="string(GPL/TrustedCertList)"></assign>
+                          <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                        </output>
+                        <input message="inmsg">
+                          <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                        </input>
+                      </operation>
+
+                    </sequence>
+                    <sequence name="No certificate / too large">
+                      <sequence name="Verify With List">
+                        <operation name="CMS: verify signature">
+                          <participant name="FB_SMIME"/>
+                          <output message="CryptoMsgServiceInputMessage">
+                            <assign to="." from="*"></assign>
+                            <assign to="action">parse</assign>
+                            <assign to="pipelineTimeout" from="sci-get-property(&apos;fbgpl&apos;, &apos;SMIME.Pipeline.Timeout&apos;)"></assign>
+                            <assign to="verifyCerts" from="string(GPL/TrustedCertList)"></assign>
+                            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                          </output>
+                          <input message="inmsg">
+                            <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                            <assign to="TrustedCerts/InvalidCount" from="count(//VerificationCertStatus[./text()!=&apos;ok&apos;])"></assign>
+                          </input>
+                        </operation>
+
+                        <assign name="Assign" to="TrustedCerts/LoopCounter">0</assign>
+                        <onFault>
+                          <sequence name="List Verify Error">
+                            <assign name="Assign" to="TrustedCerts/LoopCounter">1</assign>
+                          </sequence>
+                        </onFault>
+                      </sequence>
+                      <sequence name="VerifyLoop">
+                        <choice name="More Certs?">
+                          <select>
+                            <case ref="TrustedCertsLeft" activity="Verify with Indvidual Cert"/>
+                            <case ref="NoTrustedCertsLeft" activity="Signature Error"/>
+                          </select>
+
+                          <sequence name="Verify with Indvidual Cert">
+                            <operation name="CMS: verify signature">
+                              <participant name="FB_SMIME"/>
+                              <output message="CryptoMsgServiceInputMessage">
+                                <assign to="." from="*"></assign>
+                                <assign to="action">parse</assign>
+                                <assign to="verifyCerts" from="TrustedCerts/TrustedCert[position()=number(/ProcessData/TrustedCerts/LoopCounter)]/text()"></assign>
+                                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                              </output>
+                              <input message="inmsg">
+                                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                              </input>
+                            </operation>
+
+                            <onFault>
+                              <sequence name="LoopToNext">
+                                <assign name="Assign" to="TrustedCerts/LoopCounter" from="number(TrustedCerts/LoopCounter)+1"></assign>
+                                <repeat name="VerifyLoop" ref="VerifyLoop"/>
+
+                              </sequence>
+                            </onFault>
+                          </sequence>
+                          <sequence name="Signature Error">
+                            <operation name="Business Process Exception">
+                              <participant name="FB_BPEXCEPTION"/>
+                              <output message="BPExceptionServiceTypeInputMessage">
+                                <assign to="." from="*"></assign>
+                                <assign to="exceptionCode">All known Trusted Certificates have been used without verifying the signature</assign>
+                              </output>
+                              <input message="inmsg">
+                                <assign to="." from="*"></assign>
+                              </input>
+                            </operation>
+
+                          </sequence>
+                        </choice>
+                      </sequence>
+                    </sequence>
+                  </choice>
+                  <onFault>
+                    <sequence name="SMIME GPLRR_05">
+                      <operation name="FileBrokerEvent: FBK070">
+                        <participant name="FB_FILEBROKER_EVENT"/>
+                        <output message="FileBrokerEventInputMessage">
+                          <assign to="." from="*"></assign>
+                          <assign to="EventCode">FBK070</assign>
+                          <assign to="Info" from="concat(&apos;DataFlowID: &apos;, RouteDataflowId)"></assign>
+                        </output>
+                        <input message="inmsg">
+                          <assign to="." from="*"></assign>
+                        </input>
+                      </operation>
+
+                      <operation name="Assign: Set GPL_RR05">
+                        <participant name="AssignService"/>
+                        <output message="AssignServiceTypeInputMessage">
+                          <assign to="." from="*"></assign>
+                          <assign to="GPL/RRCode">GPL_RR05</assign>
+                        </output>
+                        <input message="inmsg">
+                          <assign to="." from="*"></assign>
+                        </input>
+                      </operation>
+
+                      <operation name="Business Process Exception">
+                        <participant name="FB_BPEXCEPTION"/>
+                        <output message="BPExceptionServiceTypeInputMessage">
+                          <assign to="." from="*"></assign>
+                          <assign to="exceptionCode" from="concat(&apos;[&apos;, GPL/RRCode, &apos;] &apos;, GPL/RRReport)"></assign>
+                        </output>
+                        <input message="inmsg">
+                          <assign to="." from="*"></assign>
+                        </input>
+                      </operation>
+
+                    </sequence>
+                  </onFault>
+                </sequence>
+              </sequence>
+            </sequence>
+            <sequence name="Unknown">
+              <operation name="Business Process Exception">
+                <participant name="FB_BPEXCEPTION"/>
+                <output message="BPExceptionServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="exceptionCode">The Digital Signature Format is unknown and not supported</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </choice>
+        </sequence>
+      </sequence>
+      <operation name="FBFile: Register and Duplicate Check">
+        <participant name="FB_FILEBROKER_FILE"/>
+        <output message="FileBrokerFileInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="Direction">Inbound</assign>
+          <assign to="DataFlowID" from="string(RouteDataflowId)"></assign>
+          <assign to="CustomerFilename" from="string(PFilename)"></assign>
+          <assign to="Channel" from="string(GPL/Channel)"></assign>
+          <assign to="SubmitterID" from="string(GPL/CSID)"></assign>
+          <assign to="DuplicateDays" from="sci-get-property(&apos;fbgpl&apos;, &apos;Duplicate.Check.Days&apos;)"></assign>
+          <assign to="ChannelRef" from="string(GPL/DCGRef)"></assign>
+          <assign to="DuplicateCheck" from="string(GPL/DuplicateCheck)"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="GPL/RRReport" from="string(ErrorDescription)"></assign>
+          <assign to="GPL/Registered" from="string(&apos;true&apos;)"></assign>
+          <assign to="GPL/RRCode" from="string(ErrorCode)"></assign>
+        </input>
+      </operation>
+
+      <onFault>
+        <sequence name="Register Error File">
+          <choice name="IsRejection?">
+            <select>
+              <case ref="RegisterAfterRejection" activity="RegisterInbound File"/>
+              <case ref="IsRejection" negative="true" activity="Internal Error"/>
+            </select>
+
+            <sequence name="RegisterInbound File">
+              <operation name="FBFile: Register Only">
+                <participant name="FB_FILEBROKER_FILE"/>
+                <output message="FileBrokerFileInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="Direction">Inbound</assign>
+                  <assign to="DataFlowID" from="string(RouteDataflowId)"></assign>
+                  <assign to="CustomerFilename" from="string(PFilename)"></assign>
+                  <assign to="Channel" from="string(GPL/Channel)"></assign>
+                  <assign to="SubmitterID" from="string(GPL/CSID)"></assign>
+                  <assign to="DuplicateDays">0</assign>
+                  <assign to="ChannelRef" from="string(GPL/DCGRef)"></assign>
+                  <assign to="DuplicateCheck">False</assign>
+                  <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                </output>
+                <input message="inmsg">
+                </input>
+              </operation>
+
+            </sequence>
+            <sequence name="Internal Error">
+              <operation name="Business Process Exception">
+                <participant name="FB_BPEXCEPTION"/>
+                <output message="BPExceptionServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="exceptionCode">The GPL file could not be processed. No FSN will be sent to the customer</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </choice>
+        </sequence>
+      </onFault>
+    </sequence>
+    <sequence name="SubFlow: Handle Rejection">
+      <sequence name="Rejection">
+        <choice name="Rejected?">
+          <select>
+            <case ref="IsRejection" activity="Create FSN"/>
+          </select>
+
+          <sequence name="Create FSN">
+            <operation name="Assign: Set FSN">
+              <participant name="AssignService"/>
+              <output message="AssignServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="GPL/Format">FBXML</assign>
+                <assign to="GPL/Type">FR</assign>
+                <assign to="GPL/RRDescription" from="sci-get-property(&apos;fbgpl&apos;, concat(&apos;FSN.Description.&apos;, GPL/RRCode))"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="XSLT: Create FSN">
+              <participant name="FB_XSLT"/>
+              <output message="XSLTServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="xslt_name">FB_Create_FSN</assign>
+                <assign to="xml_input_from">ProcData</assign>
+                <assign to="input_pd_xpath">/ProcessData</assign>
+                <assign to="xml_input_validation">NO</assign>
+                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+              </input>
+            </operation>
+
+            <operation name="FB Route Event: FB_8061">
+              <participant name="FileGatewayRouteEventService"/>
+              <output message="FileGatewayRouteEventServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="EventAttributes/Filename" from="string(PFilename)" append="true"></assign>
+                <assign to="EventAttributes/RRCode" from="string(GPL/RRCode)" append="true"></assign>
+                <assign to="EventAttributes/RRDescription" from="string(GPL/RRDescription)" append="true"></assign>
+                <assign to="EventCode">FB_8061</assign>
+                <assign to="ExceptionLevel">Abnormal</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+        <assign name="Assign" to="RouteOnErrorStatus">true</assign>
+      </sequence>
+    </sequence>
+    <assign name="Assign" to="CFilename" from="concat(GPL/CSID, &apos;.&apos;, GPL/Format, &apos;.&apos;, GPL/Type, &apos;.&apos;, RouteDataflowId, &apos;_&apos;, RouterWFID, &apos;_&apos;, PFilename)"></assign>
+    <operation name="Get Doc Info: rename PrimaryDocument">
+      <participant name="FB_GETDOCINFO"/>
+      <output message="GetDocumentInfoServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="updateMetaDataOnly">true</assign>
+        <assign to="DocumentName" from="string(CFilename)"></assign>
+        <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+        <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+      </output>
+      <input message="inmsg">
+      </input>
+    </operation>
+
+    <onFault>
+      <sequence name="FB_8060">
+        <assign name="Assign" to="RouteOnErrorStatus">false</assign>
+        <operation name="FG Route Event: FB_8060">
+          <participant name="FileGatewayRouteEventService"/>
+          <output message="FileGatewayRouteEventServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventAttributes/Filename" from="string(PFilename)" append="true"></assign>
+            <assign to="EventCode">FB_8060</assign>
+            <assign to="ExceptionLevel">Abnormal</assign>
+            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Mailbox Add: Add to Route DeadLetter">
+          <participant name="FB_MAILBOXADD"/>
+          <output message="MailboxAddServiceTypeInputMessage">
+            <assign to="Extractable">YES</assign>
+            <assign to="MessageName" from="concat(RFilename, &apos;_&apos;, PFilename)"></assign>
+            <assign to="MailboxPath" from="sci-get-property(&apos;fbgpl&apos;, &apos;Route.DeadLetter&apos;)"></assign>
+            <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

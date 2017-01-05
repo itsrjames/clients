@@ -1,0 +1,69 @@
+<process name="FB_tools_RecycleSchedules">
+  <rule name="MoreKeys">
+    <condition>number(loopcounter)&lt;=number(keycount)</condition>
+  </rule>
+
+  <sequence name="Recycle Schedules">
+    <operation name="JDBC: Get list of active schedules">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="sql">SELECT SCHEDULEID FROM SCHEDULE WHERE STATUS=&apos;ACTIVE&apos;</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="ScheduleList" from="PrimaryDocument/@SCIObjectID"></assign>
+      </input>
+    </operation>
+
+    <operation name="XSLT: Create Disable XAPI">
+      <participant name="FB_XSLT"/>
+      <output message="XSLTServiceTypeInputMessage">
+        <assign to="xslt_name">FB_changeSchedule_XAPI</assign>
+        <assign to="xml_input_from">PrimaryDoc</assign>
+        <assign to="additional_xslt_params">STATUS=INACTIVE</assign>
+        <assign to="xml_input_validation">NO</assign>
+        <assign to="PrimaryDocument" from="ScheduleList/@SCIObjectID"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="XAPI: Disable Schedules">
+      <participant name="XAPIService"/>
+      <output message="XAPIServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="api">multiApi</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="XSLT: Create Enable XAPI">
+      <participant name="FB_XSLT"/>
+      <output message="XSLTServiceTypeInputMessage">
+        <assign to="xslt_name">FB_changeSchedule_XAPI</assign>
+        <assign to="xml_input_from">PrimaryDoc</assign>
+        <assign to="additional_xslt_params">STATUS=ACTIVE</assign>
+        <assign to="xml_input_validation">NO</assign>
+        <assign to="PrimaryDocument" from="ScheduleList/@SCIObjectID"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="XAPI: Enable schedules">
+      <participant name="XAPIService"/>
+      <output message="XAPIServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="api">multiApi</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+  </sequence>
+</process>

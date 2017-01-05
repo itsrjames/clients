@@ -1,0 +1,86 @@
+<process name="FB_GPL_MQReceiveFile_B2B">
+  <rule name="WarningOnly">
+    <condition>string(WarningOnly)=&apos;true&apos;</condition>
+  </rule>
+
+  <sequence name="SFG_Main">
+    <sequence name="Terminate Restarted">
+      <operation name="BPControl">
+        <participant name="FB_BPCONTROL"/>
+        <output message="BPControlInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="Action">Terminate</assign>
+          <assign to="HaltOnError">True</assign>
+          <assign to="WFID" from="string(RESTART_FROM)"></assign>
+        </output>
+        <input message="inmsg">
+        </input>
+      </operation>
+
+      <onFault>
+        <sequence name="NoAction">
+          <assign to="TerminateError">TRUE</assign>
+        </sequence>
+      </onFault>
+    </sequence>
+    <operation name="Assign init parms">
+      <participant name="AssignService"/>
+      <output message="AssignServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="FB_MQProcessFile/MailboxPath" from="sci-get-property(&apos;fbmq&apos;, &apos;B2B.GPL.FileMailbox&apos;)"></assign>
+        <assign to="FB_MQProcessFile/Producer">B2B</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Invoke FB_MQProcessFile (inline)">
+      <participant name="FB_INVOKE_SUBPROCESS"/>
+      <output message="InvokeSubProcessServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="INVOKE_MODE">INLINE</assign>
+        <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+        <assign to="WFD_NAME">FB_MQProcessFile</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <onFault>
+      <sequence name="FBK056">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK056</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <choice name="Set Halted?">
+          <select>
+            <case ref="WarningOnly" negative="true" activity="SetAsHalted"/>
+          </select>
+
+          <sequence name="SetAsHalted">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">Setting process as halted</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

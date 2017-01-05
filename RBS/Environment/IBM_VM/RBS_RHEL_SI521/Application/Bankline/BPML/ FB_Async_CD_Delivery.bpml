@@ -1,0 +1,75 @@
+<process name="FB_Async_CD_Delivery">
+  <sequence name="Async CD Delivery">
+    <assign name="Assign" to="Snode" from="sci-get-property(&apos;fbasynccd&apos;, concat(&apos;SNODE.&apos;, FG/MailboxPath))"></assign>
+    <operation name="JDBC: Insert into FB_AYSYNC_CD">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="param1" from="string(Snode)"></assign>
+        <assign to="param2" from="string(DestinationMessageName)"></assign>
+        <assign to="param3" from="string(RouteDataflowId)"></assign>
+        <assign to="param4" from="string(FG/WorkflowId)"></assign>
+        <assign to="param5" from="string(FG/DeliveryKey)"></assign>
+        <assign to="param6" from="string(PrimaryDocumentId)"></assign>
+        <assign to="param7">NULL</assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="paramtype3">Long</assign>
+        <assign to="paramtype4">Long</assign>
+        <assign to="paramtype5">String</assign>
+        <assign to="paramtype6">String</assign>
+        <assign to="paramtype7">String</assign>
+        <assign to="query_type">INSERT</assign>
+        <assign to="sql">INSERT INTO FB_ASYNC_CD (SNODE, FILENAME, DATAFLOW_ID, DELIVERY_WFID, DELIVERY_KEY, DOCUMENT_ID, BATCH_ID, CREATED, LAST_MODIFIED) VALUES (?,?,?,?,?,?,?,sysdate,sysdate)</assign>
+        <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+      </output>
+      <input message="inmsg">
+      </input>
+    </operation>
+
+    <operation name="FG Route Event: FB_8000">
+      <participant name="FileGatewayRouteEventService"/>
+      <output message="FileGatewayRouteEventServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="EventAttributes/Filename" from="string(DestinationMessageName)" append="true"></assign>
+        <assign to="EventAttributes/Snode" from="string(Snode)" append="true"></assign>
+        <assign to="EventCode">FB_8000</assign>
+        <assign to="ExceptionLevel">Normal</assign>
+        <assign to="EventAttributes/DocID" from="string(PrimaryDocumentId)"></assign>
+        <assign to="EventAttributes/TrackingID" from="string(TRACKINGID)"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <onFault>
+      <sequence name="FB_8050">
+        <operation name="FG Route Event: FB_8050">
+          <participant name="FileGatewayRouteEventService"/>
+          <output message="FileGatewayRouteEventServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventAttributes/Filename" from="string(DestinationMessageName)" append="true"></assign>
+            <assign to="EventAttributes/Snode" from="string(Snode)" append="true"></assign>
+            <assign to="EventCode">FB_8050</assign>
+            <assign to="ExceptionLevel">Abnormal</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode" from="string(Prev_NotSuccess_Adv_Status)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

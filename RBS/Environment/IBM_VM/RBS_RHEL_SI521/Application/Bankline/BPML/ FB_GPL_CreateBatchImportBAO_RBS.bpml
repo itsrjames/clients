@@ -1,0 +1,48 @@
+<process name="FB_GPL_CreateBatchImportBAO_RBS">
+  <sequence name="Create Batch Import BAO RBS">
+    <operation name="Assign: Set brand details">
+      <participant name="AssignService"/>
+      <output message="AssignServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="FB_GPL_CreateBatchImportBAO/Path">/FileBroker/GPL/BAOImport/RBS</assign>
+        <assign to="FB_GPL_CreateBatchImportBAO/Brand">RBS</assign>
+        <assign to="FB_GPL_CreateBatchImportBAO/BankID">RBOS</assign>
+        <assign to="FB_GPL_CreateBatchImportBAO/DB2Qualifier" from="sci-get-property(&apos;fbgpl&apos;, &apos;RBSSchema&apos;)"></assign>
+        <assign to="FB_GPL_CreateBatchImportBAO/DB2Pool">GPLRBSPool</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Invoke FB_GPL_CreateBatchImportBAO (inline)">
+      <participant name="FB_INVOKE_SUBPROCESS"/>
+      <output message="InvokeSubProcessServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="INVOKE_MODE">INLINE</assign>
+        <assign to="WFD_NAME">FB_GPL_CreateBatchImportBAO</assign>
+        <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <onFault>
+      <sequence name="FBK080">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK080</assign>
+            <assign to="Info" from="concat(&apos;Brand is &apos;, FB_GPL_CreateBatchImportBAO/Brand)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

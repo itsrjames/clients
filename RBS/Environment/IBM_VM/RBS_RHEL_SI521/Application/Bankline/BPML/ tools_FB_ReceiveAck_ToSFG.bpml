@@ -1,0 +1,73 @@
+<process name="tools_FB_ReceiveAck_ToSFG">
+  <sequence name="Sequence Start">
+    <operation name="Lightweight JDBC Adapter">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1" from="string(MQ/correlationId)"></assign>
+        <assign to="param2">SFG</assign>
+        <assign to="param3">FB</assign>
+        <assign to="param4">0</assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="paramtype4">Integer</assign>
+        <assign to="sql">SELECT DOC_ID, STATUS FROM TOOLS_FB_MQ_FILE_TRANSFER  WHERE CORRELATION_ID=? AND PRODUCER=? AND CONSUMER=? AND ARCHIVED=?</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="FileDocID" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/DOC_ID/text()"></assign>
+      </input>
+    </operation>
+
+    <operation name="Get Document Information Service">
+      <participant name="FB_GETDOCINFO"/>
+      <output message="GetDocumentInfoServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="DOCUMENT_ID" from="FileDocID/text()"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+      </input>
+    </operation>
+
+    <operation name="WebSphere MQ Adapter">
+      <participant name="tools_FB_GPL_PutFileFromSFGtoMQ"/>
+      <output message="WebsphereMQInputMessage">
+        <assign to="snd_HexToByte_corId">Yes</assign>
+        <assign to="snd_maxMsgSize">10000</assign>
+        <assign to="snd_MQMD_correlId" from="MQ/correlationId/text()"></assign>
+        <assign to="snd_MQMD_msgType">DATAGRAM</assign>
+        <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID" append="true"></assign>
+        <assign to="snd_noSegSplit">Yes</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Lightweight JDBC Adapter">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1">2</assign>
+        <assign to="param2" from="string(MQ/correlationId)"></assign>
+        <assign to="param3">SFG</assign>
+        <assign to="param4">FB</assign>
+        <assign to="param5">0</assign>
+        <assign to="param6">0</assign>
+        <assign to="paramtype1">Integer</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="paramtype4">String</assign>
+        <assign to="paramtype5">Integer</assign>
+        <assign to="paramtype6">Integer</assign>
+        <assign to="query_type">UPDATE</assign>
+        <assign to="sql">UPDATE TOOLS_FB_MQ_FILE_TRANSFER SET STATUS=?,  LAST_MODIFIED=SYSDATE WHERE CORRELATION_ID=? AND PRODUCER=? AND CONSUMER=? AND STATUS=? AND ARCHIVED=?</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+  </sequence>
+</process>

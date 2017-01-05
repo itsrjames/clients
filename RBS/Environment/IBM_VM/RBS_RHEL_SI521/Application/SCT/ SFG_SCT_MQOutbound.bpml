@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process name="SFG_SCT_MQOutbound">
+	<sequence name="Main">
+		<sequence name="Remove MQ Header">
+			<!-- CHG_OB_IBM_RJ_131112_00001 Operation Name: DocumentTextUtil: Remove 
+				Header Add payment_bic for pacs.004 <assign to="PaymentBIC_camt.029" from="string(DocToDOM(PrimaryDocument, 
+				&apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_camt.056" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_pacs.004" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_pacs.008" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> -->
+
+			<!-- CHG_BPML_IBM_RJ_003 Old Setting <assign to="PaymentBIC_camt.029" 
+				from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_camt.056" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_pacs.004" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_pacs.008" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> 
+				New Setting <assign to="PaymentBIC_camt.029" from="string(DocToDOM(PrimaryDocument, 
+				&apos;false&apos;)//*[local-name()='DbtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_camt.056" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='DbtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_pacs.004" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='DbtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_pacs.008" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='DbtrAgt']//*[local-name()='BIC'])"></assign> 
+				Using DbtrAgt/FinInstnId/BIC -->
+
+			<!-- CHG_BPML_IBM_RJ_006 Old Setting <assign to="PaymentBIC_pacs.004" 
+				from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='DbtrAgt']//*[local-name()='BIC'])"></assign> 
+				New Setting <assign to="PaymentBIC_pacs.004" from="string(DocToDOM(PrimaryDocument, 
+				&apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> -->
+
+			<!-- RBS DEFECT NUMBER 5 Old Setting <assign to="PaymentBIC_camt.029" 
+				from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='DbtrAgt']//*[local-name()='BIC'])"></assign> 
+				New Setting <assign to="PaymentBIC_camt.029" from="string(DocToDOM(PrimaryDocument, 
+				&apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> -->
+
+			<!-- RBS DEFECT NUMBER 9 Old Setting <assign to="PaymentBIC_camt.029" 
+				from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_camt.056" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='DbtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_pacs.004" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_pacs.008" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='DbtrAgt']//*[local-name()='BIC'])"></assign> 
+				New Setting <assign to="PaymentBIC_camt.029" from="string(DocToDOM(PrimaryDocument, 
+				&apos;false&apos;)//*[local-name()='Assgnr']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_camt.056" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='Assgnr']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_pacs.004" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='InstgAgt']//*[local-name()='BIC'])"></assign> 
+				<assign to="PaymentBIC_pacs.008" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='InstgAgt']//*[local-name()='BIC'])"></assign> -->
+
+			<operation name="DocumentTextUtil: Remove Header">
+
+				<participant name="SFG_DOCUMENT_TEXT_UTIL_SG" />
+
+				<output message="DocumentTextUtilInputMessage">
+
+					<assign to="action">string-after</assign>
+
+					<assign to="searchstring">ZZZZZZZZ</assign>
+
+					<assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+
+					<assign to="." from="*" />
+
+				</output>
+
+				<input message="inmsg">
+
+					<assign to="." from="PrimaryDocument" />
+
+					<assign to="FileType"
+						from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.type.&apos;,local-name(DocToDOM(PrimaryDocument, &apos;false&apos;)/*[1] )))" />
+
+					<assign to="Reference_camt.029"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/camt029:Assgnmt/camt029:Id)" />
+
+					<assign to="Reference_camt.056"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/camt056:Assgnmt/camt056:Id)" />
+
+					<assign to="Reference_pacs.004"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/*[local-name()=&apos;GrpHdr&apos;]/*[local-name()=&apos;MsgId&apos;])" />
+
+					<assign to="Reference_pacs.008"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/*[local-name()=&apos;GrpHdr&apos;]/*[local-name()=&apos;MsgId&apos;])" />
+
+					<assign to="SettleAmt_camt.029" from="string(&apos;0&apos;)" />
+
+					<assign to="SettleAmt_camt.056"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/camt056:Undrlyg/camt056:TxInf/camt056:OrgnlIntrBkSttlmAmt)" />
+
+					<assign to="SettleAmt_pacs.004"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/*[local-name()=&apos;GrpHdr&apos;]/*[local-name()=&apos;TtlRtrdIntrBkSttlmAmt&apos;])" />
+
+					<assign to="SettleAmt_pacs.008"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/*[local-name()=&apos;CdtTrfTxInf&apos;]/*[local-name()=&apos;IntrBkSttlmAmt&apos;])" />
+
+					<assign to="SettleDate_camt.029"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/camt029:CxlDtls/camt029:TxInfAndSts/camt029:OrgnlTxRef/camt029:IntrBkSttlmDt)" />
+
+					<assign to="SettleDate_camt.056"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/camt056:Undrlyg/camt056:TxInf/camt056:OrgnlIntrBkSttlmDt)" />
+
+					<assign to="SettleDate_pacs.004"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/*[local-name()=&apos;GrpHdr&apos;]/*[local-name()=&apos;IntrBkSttlmDt&apos;])" />
+
+					<assign to="SettleDate_pacs.008"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/*[local-name()=&apos;GrpHdr&apos;]/*[local-name()=&apos;IntrBkSttlmDt&apos;])" />
+
+					<assign to="TransactionID_camt.029"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/camt029:CxlDtls/camt029:TxInfAndSts/camt029:CxlStsId)" />
+
+					<assign to="TransactionID_camt.056"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/camt056:Undrlyg/camt056:TxInf/camt056:CxlId)" />
+
+					<assign to="TransactionID_pacs.004"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/*[local-name()=&apos;TxInf&apos;]/*[local-name()=&apos;RtrId&apos;])" />
+
+					<assign to="TransactionID_pacs.008"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/*/*[local-name()=&apos;CdtTrfTxInf&apos;]/*[local-name()=&apos;PmtId&apos;]/*[local-name()=&apos;TxId&apos;])" />
+
+					<assign to="PaymentBIC_camt.029"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])" />
+
+					<assign to="PaymentBIC_camt.056"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='DbtrAgt']//*[local-name()='BIC'])" />
+
+					<assign to="PaymentBIC_pacs.004"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='CdtrAgt']//*[local-name()='BIC'])" />
+
+					<assign to="PaymentBIC_pacs.008"
+						from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//*[local-name()='DbtrAgt']//*[local-name()='BIC'])" />
+
+				</input>
+
+			</operation>
+
+
+
+			<onFault>
+
+				<sequence name="SCT23">
+
+					<assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT23
+					</assign>
+
+					<operation name="Business Process Exception">
+
+						<participant name="FB_BPEXCEPTION" />
+
+						<output message="BPExceptionServiceTypeInputMessage">
+
+							<assign to="." from="*" />
+
+						</output>
+
+						<input message="inmsg">
+
+							<assign to="." from="*" />
+
+						</input>
+
+					</operation>
+
+
+
+				</sequence>
+
+			</onFault>
+
+		</sequence>
+
+		<sequence name="Validate">
+
+			<operation name="XSLT: Validate and strip xml declaration">
+
+				<participant name="FB_XSLT" />
+
+				<output message="XSLTServiceTypeInputMessage">
+
+					<assign to="check_memory_requirements">FALSE</assign>
+
+					<assign to="incremental_transform">TRUE</assign>
+
+					<assign to="xml_input_from">PrimaryDoc</assign>
+
+					<assign to="xml_input_validation">SCHEMA</assign>
+
+					<assign to="xslt_name">SFG_SCT_Format_Outbound</assign>
+
+					<assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+
+					<assign to="." from="*" />
+
+				</output>
+
+				<input message="inmsg">
+
+					<assign to="." from="PrimaryDocument" />
+
+				</input>
+
+			</operation>
+
+
+
+			<onFault>
+
+				<sequence name="SCT24">
+
+					<assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT24
+					</assign>
+
+					<operation name="Business Process Exception">
+
+						<participant name="FB_BPEXCEPTION" />
+
+						<output message="BPExceptionServiceTypeInputMessage">
+
+							<assign to="." from="*" />
+
+						</output>
+
+						<input message="inmsg">
+
+							<assign to="." from="*" />
+
+						</input>
+
+					</operation>
+
+
+
+				</sequence>
+
+			</onFault>
+
+		</sequence>
+
+		<!-- CHG_CR003_OB_IBM_RJ_221112_00001_SFG_SCT_MQOutbound_00001 <sequence 
+			name="Store"> <operation name="Mailbox Add Service"> <participant name="FB_MAILBOXADD"/> 
+			<output message="MailboxAddServiceTypeInputMessage"> <assign to="Extractable">YES</assign> 
+			<assign to="MailboxPath" from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.mbxmq.out.&apos;, 
+			normalize-space(string(MQ/QNAME))))"></assign> <assign to="." from="*"></assign> 
+			</output> <input message="inmsg"> <assign to="MessageID" from="string(MessageId)"></assign> 
+			</input> </operation> <onFault> <sequence name="SCT25"> <assign name="Assign" 
+			to="SFG_ThrowError/ErrorCode" append="true">SCT25</assign> <operation name="Business 
+			Process Exception"> <participant name="FB_BPEXCEPTION"/> <output message="BPExceptionServiceTypeInputMessage"> 
+			<assign to="." from="*"></assign> </output> <input message="inmsg"> <assign 
+			to="." from="*"></assign> </input> </operation> </sequence> </onFault> </sequence> -->
+
+		<sequence name="Record">
+
+			<!-- CHG_OB_IBM_RJ_131112_00001 Add payment BIC to insert query <assign 
+				to="param9" from="string(//*[local-name()=concat(&apos;PaymentBIC_&apos;, 
+				string(//FileType))])"></assign> <assign to="paramtype9">String</assign> 
+				Old <assign to="sql">INSERT INTO SCT_PAYMENT (MESSAGE_ID, TYPE, REFERENCE, 
+				PTIMESTAMP, STATUS,ISOUTBOUND, SETTLE_DATE, TRANSACTION_ID, SETTLE_AMT) VALUES 
+				(?, ?, ?,SYSDATE,?,?, TO_DATE(?, &apos;yyyy-MM-dd&apos;), ?,?)</assign> New 
+				<assign to="sql">INSERT INTO SCT_PAYMENT (MESSAGE_ID, TYPE, REFERENCE, PTIMESTAMP, 
+				STATUS,ISOUTBOUND, SETTLE_DATE, TRANSACTION_ID, SETTLE_AMT,PAYMENT_BIC) VALUES 
+				(?, ?, ?,SYSDATE,?,?, TO_DATE(?, &apos;yyyy-MM-dd&apos;), ?,?,?)</assign> 
+				CHG_CR003_OB_IBM_RJ_221112_00001_SFG_SCT_MQOutbound_00001 Old <assign to="param1" 
+				from="string(MessageID)"></assign> <assign to="sql">INSERT INTO SCT_PAYMENT 
+				(MESSAGE_ID, TYPE, REFERENCE, PTIMESTAMP, STATUS,ISOUTBOUND, SETTLE_DATE, 
+				TRANSACTION_ID, SETTLE_AMT,PAYMENT_BIC) VALUES (?, ?, ?,SYSDATE,?,?, TO_DATE(?, 
+				&apos;yyyy-MM-dd&apos;), ?,?,?)</assign> New <assign to="param1" from="string(PrimaryDocument/@SCIObjectID)"></assign> 
+				<assign to="sql">INSERT INTO SCT_PAYMENT (DOC_ID, TYPE, REFERENCE, PTIMESTAMP, 
+				STATUS,ISOUTBOUND, SETTLE_DATE, TRANSACTION_ID, SETTLE_AMT,PAYMENT_BIC) VALUES 
+				(?, ?, ?,SYSDATE,?,?, TO_DATE(?, &apos;yyyy-MM-dd&apos;), ?,?,?)</assign> -->
+
+			<operation name="Get Document Info">
+
+				<participant name="GetDocumentInfoService" />
+
+				<output message="GetDocumentInfoServiceTypeInputMessage">
+
+					<assign to="." from="*" />
+
+				</output>
+
+				<input message="inmsg">
+
+					<assign to="DocumentID" from="string(DocumentId)" />
+
+				</input>
+
+			</operation>
+
+			<!-- BUGFIX_001_BPML_IBM_RJ Enforce PaymentBIC is inserted in BIC8 format 
+				Old Setting <assign to="param9" from="string(//*[local-name()=concat(&apos;PaymentBIC_&apos;, 
+				string(//FileType))])"></assign> New Setting substring(//*[local-name()=concat('PaymentBIC_', 
+				string(//FileType))],1,8) -->
+
+			<operation name="LWJDBC: Insert Payment record">
+
+				<participant name="FB_LWJDBC" />
+
+				<output message="LightweightJDBCAdapterTypeInputMessage">
+
+					<assign to="param1" from="string(DocumentID)" />
+
+					<assign to="param2" from="string(FileType)" />
+
+					<assign to="param3"
+						from="string(//*[local-name()=concat(&apos;Reference_&apos;, string(//FileType))])" />
+
+					<assign to="param4">0</assign>
+
+					<assign to="param5">1</assign>
+
+					<assign to="param6"
+						from="string(//*[local-name()=concat(&apos;SettleDate_&apos;, string(//FileType))])" />
+
+					<assign to="param7"
+						from="string(//*[local-name()=concat(&apos;TransactionID_&apos;, string(//FileType))])" />
+
+					<assign to="param8"
+						from="string(//*[local-name()=concat(&apos;SettleAmt_&apos;, string(//FileType))])" />
+
+					<assign to="param9"
+						from="substring(//*[local-name()=concat('PaymentBIC_', string(//FileType))],1,8)" />
+
+					<assign to="paramtype1">String</assign>
+
+					<assign to="paramtype2">String</assign>
+
+					<assign to="paramtype3">String</assign>
+
+					<assign to="paramtype4">Integer</assign>
+
+					<assign to="paramtype5">Integer</assign>
+
+					<assign to="paramtype6">String</assign>
+
+					<assign to="paramtype7">String</assign>
+
+					<assign to="paramtype8">Double</assign>
+
+					<assign to="paramtype9">String</assign>
+
+					<assign to="pool">oraclePool</assign>
+
+					<assign to="query_type">INSERT</assign>
+
+					<assign to="result_name">result</assign>
+
+					<assign to="row_name">row</assign>
+
+					<assign to="sql">INSERT INTO SCT_PAYMENT (DOC_ID, TYPE, REFERENCE,
+						PTIMESTAMP, STATUS,ISOUTBOUND, SETTLE_DATE, TRANSACTION_ID,
+						SETTLE_AMT,PAYMENT_BIC) VALUES (?, ?, ?,SYSDATE,?,?, TO_DATE(?,
+						&apos;yyyy-MM-dd&apos;), ?,?,?)</assign>
+
+					<assign to="." from="*" />
+
+				</output>
+
+				<input message="inmsg" />
+
+
+
+			</operation>
+
+			<operation name="Release Service">
+
+				<participant name="ReleaseService" />
+
+				<output message="ReleaseServiceTypeInputMessage">
+
+					<assign to="TARGET">DocumentID</assign>
+
+					<assign to="." from="*" />
+
+				</output>
+
+				<input message="inmsg">
+
+					<assign to="." from="*" />
+
+				</input>
+
+			</operation>
+
+			<onFault>
+
+				<sequence name="SCT26">
+
+					<assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT26
+					</assign>
+
+					<operation name="Business Process Exception">
+
+						<participant name="FB_BPEXCEPTION" />
+
+						<output message="BPExceptionServiceTypeInputMessage">
+
+							<assign to="." from="*" />
+
+						</output>
+
+						<input message="inmsg">
+
+							<assign to="." from="*" />
+
+						</input>
+
+					</operation>
+
+
+
+				</sequence>
+
+			</onFault>
+
+		</sequence>
+
+		<onFault>
+
+			<sequence name="MQ Error">
+
+				<assign name="Assign" to="message_to_child" from="*" />
+
+				<operation name="Invoke SFG_SCT_MQError">
+
+					<participant name="FB_INVOKE_SUBPROCESS" />
+
+					<output message="InvokeSubProcessServiceTypeInputMessage">
+
+						<assign to="INVOKE_MODE">ASYNC</assign>
+
+						<assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+
+						<assign to="WFD_NAME">SFG_SCT_MQError</assign>
+
+						<assign to="." from="*" />
+
+					</output>
+
+					<input message="inmsg">
+
+						<assign to="." from="*" />
+
+					</input>
+
+				</operation>
+
+
+
+			</sequence>
+
+		</onFault>
+
+	</sequence>
+
+</process>

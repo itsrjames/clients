@@ -1,0 +1,13 @@
+<AFTExtensions>
+	<AFTExtension name="FileBroker_AsyncCD_Delivery" type="consumer-delivery-protocol" label="fbacd.protocol.label" bp="FB_Async_CD_Delivery">
+   </AFTExtension>
+	<AFTExtension name="FileBroker_MQ_Delivery" type="consumer-delivery-protocol" label="fbmq.protocol.label" bp="FB_MQ_Delivery">
+		<GROUP title="fbmq.instance.group1.title">
+			<VARDEF varname="FileConsumer" type="String" htmlType="text" validator="ALPHANUMERIC" size="20" maxsize="20" label="fbmq.group1.fileconsumer.label" required="yes"/>
+		</GROUP>
+	</AFTExtension>
+	<AFTExtension name="FileBroker_Splitter_Delivery" type="consumer-delivery-protocol" label="fbsplit.protocol.label" bp="FB_Splitter_Delivery"></AFTExtension>
+	<AFTExtension name="FileBroker_CDWTO_Delivery" type="consumer-delivery-protocol" label="fbcdwto.protocol.label" bp="FB_CDWTO_Delivery"></AFTExtension>
+	<AFTExtension name="FileBroker_SWIFT_Delivery" type="consumer-delivery-protocol" label="fbswift.protocol.label" bp="FB_SWIFT_Delivery"></AFTExtension>
+	<AFTExtension name="FileBroker_SFGLegacy_Delivery" type="consumer-delivery-protocol" label="fbsfglegacy.protocol.label" bp="FB_SFGLegacy_Delivery"></AFTExtension>
+</AFTExtensions>

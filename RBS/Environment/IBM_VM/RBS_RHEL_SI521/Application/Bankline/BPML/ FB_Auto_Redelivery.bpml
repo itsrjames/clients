@@ -1,0 +1,132 @@
+<process name="FB_Auto_Redelivery">
+  <rule name="MoreKeys">
+    <condition>number(loopcounter)&lt;=number(keycount)</condition>
+  </rule>
+
+  <sequence name="Auto Main">
+    <operation name="Lock:Unlock">
+      <participant name="FB_LOCK"/>
+      <output message="LockServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="ACTION">LOCK</assign>
+        <assign to="CLEAR_ON_START_UP">TRUE</assign>
+        <assign to="DURATION">-1</assign>
+        <assign to="LOCK_KEY">FB_Auto_Redelivery</assign>
+        <assign to="USER">FBSystem</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <sequence name="Auto Redeliver">
+      <operation name="JDBC: Get list of failed deliveries">
+        <participant name="FB_LWJDBC"/>
+        <output message="LightweightJDBCAdapterTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="sql">SELECT TRIM(d.DELIVERY_KEY) as DELIVERY_KEY  FROM FG_DELIVERY d, FG_ROUTE r, FG_ARRIVEDFILE a WHERE d.ROUTE_KEY=r.ROUTE_KEY AND r.ARRIVEDFILE_KEY = a.ARRIVEDFILE_KEY AND a.STATE=&apos;Failed&apos; AND d.STATE=&apos;Failed&apos; AND REVIEWED=0</assign>
+        </output>
+        <input message="inmsg">
+          <assign to="Redelivery" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//row"></assign>
+        </input>
+      </operation>
+
+      <assign name="Assign" to="loopcounter">1</assign>
+      <assign name="Assign" to="keycount" from="count(Redelivery/row)"></assign>
+      <sequence name="LoopStart">
+        <choice name="MoreKeys">
+          <select>
+            <case ref="MoreKeys" activity="DoXAPI"/>
+          </select>
+
+          <sequence name="DoXAPI">
+            <operation name="XSLT: Create XAPI input">
+              <participant name="FB_XSLT"/>
+              <output message="XSLTServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="xslt_name">FB_Create_RedeliveryXAPI</assign>
+                <assign to="xml_input_from">ProcData</assign>
+                <assign to="input_pd_xpath">Redelivery/row[number(/ProcessData/loopcounter)]</assign>
+                <assign to="xml_input_validation">NO</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="XAPI Service">
+              <participant name="XAPIService"/>
+              <output message="XAPIServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="api">multiApi</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <assign name="Assign" to="loopcounter" from="number(loopcounter)+1"></assign>
+            <repeat name="Repeat" ref="LoopStart"/>
+
+          </sequence>
+        </choice>
+      </sequence>
+      <operation name="Lock:Unlock">
+        <participant name="FB_LOCK"/>
+        <output message="LockServiceTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="ACTION">UNLOCK</assign>
+          <assign to="LOCK_KEY">FB_Auto_Redelivery</assign>
+          <assign to="USER">FBSystem</assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <onFault>
+        <sequence name="RelLock">
+          <operation name="Lock:Unlock">
+            <participant name="FB_LOCK"/>
+            <output message="LockServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="ACTION">UNLOCK</assign>
+              <assign to="LOCK_KEY">FB_Auto_Redelivery</assign>
+              <assign to="USER">FBSystem</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Business Process Exception">
+            <participant name="FB_BPEXCEPTION"/>
+            <output message="BPExceptionServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="exceptionCode">Continuing error state after releasing lock</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <onFault>
+      <sequence name="FBK066">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK066</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

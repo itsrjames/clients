@@ -1,0 +1,244 @@
+<process name="FB_GPL_CreateBatchImportBAO">
+  <rule name="IsBankHoliday">
+    <condition>number(FB_GPL_CreateBatchImportBAO/HolidayFlag)&gt;0</condition>
+  </rule>
+
+  <rule name="FailedMerge">
+    <condition>number(FB_GPL_CreateBatchImportBAO/FailedDocuments)&gt;0</condition>
+  </rule>
+
+  <sequence name="Main">
+    <operation name="JDBC: Query Db2 if BankHoliday">
+      <participant name="FB_SA_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="param2">HOLIDAY_FLAG</assign>
+        <assign to="paramtype2">Integer</assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="param3">RESPONSE_AREA</assign>
+        <assign to="query_type">PROCEDURE</assign>
+        <assign to="param1" from="string(FB_GPL_CreateBatchImportBAO/BankID)"></assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="sql" from="concat(&apos;CALL &apos;, FB_GPL_CreateBatchImportBAO/DB2Qualifier, &apos;.YJSC24_CHKBNKHLDAY (?,?,?)&apos;)"></assign>
+        <assign to="pool" from="string(FB_GPL_CreateBatchImportBAO/DB2Pool)"></assign>
+        <assign to="paramDirection3">OUT</assign>
+        <assign to="paramDirection2">OUT</assign>
+        <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FUL</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="FB_GPL_CreateBatchImportBAO/HolidayFlag" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+        <assign to="YJSC24Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM2)"></assign>
+      </input>
+    </operation>
+
+    <choice name="isBankHoliday?">
+      <select>
+        <case ref="IsBankHoliday" negative="true" activity="Not Bank Holiday"/>
+      </select>
+
+      <sequence name="Not Bank Holiday">
+        <sequence name="SubFlowA : Create Batch BAO Import">
+          <sequence name="Create BAO Batch file">
+            <sequence name="Trx">
+              <operation name="BP Metadata: Get WFID">
+                <participant name="FB_BPMETADATA"/>
+                <output message="BPMetaDataServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="FB_GPL_CreateBatchImportBAO/WFID" from="string(BPDATA/WORKFLOW_ID)"></assign>
+                </input>
+              </operation>
+
+              <operation name="JDBC: Assign DOC_STORAGE batch">
+                <participant name="FB_LWJDBC"/>
+                <output message="LightweightJDBCAdapterTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="param2" from="string(FB_GPL_CreateBatchImportBAO/WFID)"></assign>
+                  <assign to="paramtype2">String</assign>
+                  <assign to="paramtype3">String</assign>
+                  <assign to="param3">GPLBAOImport</assign>
+                  <assign to="paramtype4">String</assign>
+                  <assign to="param4" from="string(FB_GPL_CreateBatchImportBAO/Brand)"></assign>
+                  <assign to="query_type">UPDATE</assign>
+                  <assign to="param1">1</assign>
+                  <assign to="paramtype1">Integer</assign>
+                  <assign to="sql">UPDATE FB_DOC_STORAGE SET STATUS=?, BATCH_ID=? WHERE GROUP1_KEY=? AND GROUP2_KEY=? AND STATUS=? AND ARCHIVED=?</assign>
+                  <assign to="paramtype6">Integer</assign>
+                  <assign to="param6">0</assign>
+                  <assign to="paramtype5">Integer</assign>
+                  <assign to="param5">0</assign>
+                </output>
+                <input message="inmsg">
+                </input>
+              </operation>
+
+              <operation name="JDBC: Select DOC_STORAGE batch">
+                <participant name="FB_LWJDBC"/>
+                <output message="LightweightJDBCAdapterTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="param2">1</assign>
+                  <assign to="paramtype2">Integer</assign>
+                  <assign to="paramtype3">Integer</assign>
+                  <assign to="param3">0</assign>
+                  <assign to="param1" from="string(FB_GPL_CreateBatchImportBAO/WFID)"></assign>
+                  <assign to="paramtype1">String</assign>
+                  <assign to="sql">SELECT DOC_ID FROM FB_DOC_STORAGE WHERE BATCH_ID=? AND STATUS=? AND ARCHIVED=? ORDER BY GROUP3_KEY ASC</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="FB_GPL_CreateBatchImportBAO/MergeList" from="PrimaryDocument/@SCIObjectID"></assign>
+                </input>
+              </operation>
+
+              <operation name="Timestamp">
+                <participant name="TimestampUtilService"/>
+                <output message="TimestampUtilServiceTypeInputMessage">
+                  <assign to="action">current_time</assign>
+                  <assign to="format">yyyyMMdd</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="FB_GPL_CreateBatchImportBAO/Timestamp" from="string(time)"></assign>
+                </input>
+              </operation>
+
+              <assign name="Assign" to="FB_GPL_CreateBatchImportBAO/Filename" from="concat(&apos;BAO.EIPSV.&apos;,FB_GPL_CreateBatchImportBAO/Brand, &apos;.&apos;, FB_GPL_CreateBatchImportBAO/Timestamp, &apos;.AN&apos;)"></assign>
+              <operation name="FBDocMerge - Create Batch BAO Import">
+                <participant name="FB_DOC_MERGE"/>
+                <output message="FileBrokerDocMergeInputMessage">
+                  <assign to="DocumentSubType">plain</assign>
+                  <assign to="DocumentName" from="string(FB_GPL_CreateBatchImportBAO/Filename)"></assign>
+                  <assign to="DocumentType">text</assign>
+                  <assign to="StopOnNoDocument">false</assign>
+                  <assign to="DocIDNodeList">/result/row/DOC_ID</assign>
+                  <assign to="PrimaryDocument" from="FB_GPL_CreateBatchImportBAO/MergeList/@SCIObjectID"></assign>
+                  <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="FB_GPL_CreateBatchImportBAO/BatchFile" from="PrimaryDocument/@SCIObjectID"></assign>
+                  <assign to="FB_GPL_CreateBatchImportBAO/MergedDocuments" from="string(MergedDocuments)"></assign>
+                  <assign to="FB_GPL_CreateBatchImportBAO/InputDocuments" from="string(InputDocuments)"></assign>
+                  <assign to="FB_GPL_CreateBatchImportBAO/FailedDocuments" from="string(FailedDocuments)"></assign>
+                </input>
+              </operation>
+
+              <choice name="MergeFailed?">
+                <select>
+                  <case ref="FailedMerge" activity="MergeFailed"/>
+                </select>
+
+                <sequence name="MergeFailed">
+                  <operation name="FileBrokerEvent">
+                    <participant name="FB_FILEBROKER_EVENT"/>
+                    <output message="FileBrokerEventInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="EventCode">FBK081</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                  <operation name="Business Process Exception">
+                    <participant name="FB_BPEXCEPTION"/>
+                    <output message="BPExceptionServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="exceptionCode">Failed to merge all the BAO Import files</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </choice>
+              <operation name="Doc Keyword Replace: replace CRLF with LF">
+                <participant name="FB_DOC_KEYWORD_REPLACE"/>
+                <output message="DocKeywordReplaceInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="literal_readAheadSize">8192</assign>
+                  <assign to="literal_bufferSize">102400</assign>
+                  <assign to="literal_mode">true</assign>
+                  <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                  <assign to="keyword1" from="string(&apos;&#x0d;&#x0a;&apos;)"></assign>
+                  <assign to="replace1" from="string(&apos;&#x0a;&apos;)"></assign>
+                  <assign to="PrimaryDocument" from="FB_GPL_CreateBatchImportBAO/BatchFile/@SCIObjectID"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="FB_GPL_CreateBatchImportBAO/BatchFile" from="PrimaryDocument/@SCIObjectID"></assign>
+                </input>
+              </operation>
+
+              <operation name="Mailbox Add: Deliver batch BAO file">
+                <participant name="FB_MAILBOXADD"/>
+                <output message="MailboxAddServiceTypeInputMessage">
+                  <assign to="Extractable">YES</assign>
+                  <assign to="MessageName" from="string(FB_GPL_CreateBatchImportBAO/Filename)"></assign>
+                  <assign to="MailboxPath" from="string(FB_GPL_CreateBatchImportBAO/Path)"></assign>
+                  <assign to="PrimaryDocument" from="FB_GPL_CreateBatchImportBAO/BatchFile/@SCIObjectID"></assign>
+                  <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                </output>
+                <input message="inmsg">
+                </input>
+              </operation>
+
+              <onFault>
+                <sequence name="Rollback">
+                  <operation name="JDBC: Rollback DOC_STORAGE batch">
+                    <participant name="FB_LWJDBC"/>
+                    <output message="LightweightJDBCAdapterTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="param2" from="string(FB_GPL_CreateBatchImportBAO/WFID)"></assign>
+                      <assign to="paramtype2">Integer</assign>
+                      <assign to="paramtype3">String</assign>
+                      <assign to="param3" from="string(FB_GPL_CreateBatchImportBAO/WFID)"></assign>
+                      <assign to="paramtype4">Integer</assign>
+                      <assign to="param4">0</assign>
+                      <assign to="query_type">UPDATE</assign>
+                      <assign to="param1">0</assign>
+                      <assign to="paramtype1">Integer</assign>
+                      <assign to="sql">UPDATE FB_DOC_STORAGE SET STATUS=?, READ_WFID=?, LAST_MODIFIED=sysdate WHERE BATCH_ID=? AND ARCHIVED=? AND STATUS=?</assign>
+                      <assign to="paramtype5">Integer</assign>
+                      <assign to="param5">1</assign>
+                    </output>
+                    <input message="inmsg">
+                    </input>
+                  </operation>
+
+                  <operation name="Business Process Exception">
+                    <participant name="FB_BPEXCEPTION"/>
+                    <output message="BPExceptionServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="exceptionCode">Continuing error state after batch rollback</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </onFault>
+            </sequence>
+            <operation name="JDBC: Commit DOC_STORAGE batch">
+              <participant name="FB_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="param2" from="string(FB_GPL_CreateBatchImportBAO/WFID)"></assign>
+                <assign to="paramtype2">Integer</assign>
+                <assign to="paramtype3">String</assign>
+                <assign to="param3" from="string(FB_GPL_CreateBatchImportBAO/WFID)"></assign>
+                <assign to="paramtype4">Integer</assign>
+                <assign to="param4">0</assign>
+                <assign to="query_type">UPDATE</assign>
+                <assign to="param1">2</assign>
+                <assign to="paramtype1">Integer</assign>
+                <assign to="sql">UPDATE FB_DOC_STORAGE SET STATUS=?, READ_WFID=?, LAST_MODIFIED=sysdate WHERE BATCH_ID=? AND ARCHIVED=?</assign>
+              </output>
+              <input message="inmsg">
+              </input>
+            </operation>
+
+          </sequence>
+        </sequence>
+      </sequence>
+    </choice>
+  </sequence>
+</process>

@@ -1,0 +1,150 @@
+<process name="SFG_GPL_UIEntity">
+  <!--<rule name="TerminateBP">
+    <condition>string-length(SFG_GPL_UIEntity/GetStatusRpt)&gt;0 
+and string-length(substring-after(normalize-space(SFG_GPL_UIEntity/GetStatusRpt/text()), &apos;restarting from id &apos;))&gt;0 
+and number(sci-get-property(&apos;sfg&apos;, &apos;SFG.TerminateAfterRestart&apos;))=1</condition>
+  </rule>-->
+
+  <rule name="createDir?">
+    <condition>string(CreateDirectory)=&apos;true&apos;</condition>
+  </rule>
+
+  <rule name="CreateRoutingRule?">
+    <condition>string(CreateRoutingRule)=&apos;true&apos;</condition>
+  </rule>
+
+  <rule name="loopCount">
+    <condition>number(/ProcessData/SFG_GPL_UIEntity/loopCount)=0</condition>
+  </rule>
+
+  <rule name="loopCount=1?">
+    <condition>number(/ProcessData/SFG_GPL_UIEntity/loopCount)=1</condition>
+  </rule>
+
+  <sequence name="RRbegin">
+    <sequence name="SubFlowA: Terminate restarted">
+      <sequence name="CheckRestart">
+        <operation name="BPControl">
+					<participant name="FB_BPCONTROL"/>
+					<output message="BPControlInputMessage">
+						<assign to="." from="*"/>
+						<assign to="Action">Terminate</assign>
+						<assign to="HaltOnError">True</assign>
+						<assign to="WFID" from="string(RESTART_FROM)"/>
+					</output>
+					<input message="inmsg">
+						<assign to="." from="*"/>
+					</input>
+				</operation>
+      </sequence>
+    </sequence>
+    <sequence name="SubFlowB:  Import RR">
+      <sequence name="Sequence Start 1">
+        <choice name="Choice Start">
+          <select>
+            <case ref="CreateRoutingRule?" activity="createRR"/>
+          </select>
+
+          <sequence name="createRR">
+            <operation name="XSLT Service">
+              <participant name="FB_XSLT"/>
+              <output message="XSLTServiceTypeInputMessage">
+                <assign to="input_pd_xpath">/</assign>
+                <assign to="xml_input_from">ProcData</assign>
+                <assign to="xslt_name">SFG_GPL_CreateSWIFTRoutingRule</assign>
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="Import Service">
+              <participant name="ImportService"/>
+              <output message="ImportTypeInputMessage">
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+      </sequence>
+    </sequence>
+    <sequence name="SubFlowC: create dir">
+      <sequence name="processAndCreateService">
+        <choice name="Create Dir?">
+          <select>
+            <case ref="createDir?" activity="createDir"/>
+          </select>
+
+          <sequence name="createDir">
+            <operation name="Command Line: Call CreateEntityDirectory">
+              <participant name="CommandLineAdapter2"/>
+              <output message="CmdLineInputMessage">
+                <assign to="cmdLine" from="concat(sci-get-property(&apos;sfg&apos;, &apos;GPL.SFGCreateEntityDirectory&apos;), &apos; &apos;,  /ProcessData/SWIFTDirectory)"></assign>
+                <assign to="waitOnProcess">true</assign>
+                <assign to="successValue">0</assign>
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+      </sequence>
+    </sequence>
+    <operation name="Business Process Response Service Type">
+      <participant name="BusinessProcessResponseService"/>
+      <output message="BusinessProcessResponseServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <onFault>
+      <sequence name="GPL50">
+        <operation name="XML Encoder">
+          <participant name="XMLEncoder"/>
+          <output message="XMLEncoderTypeInputMessage">
+            <assign to="mode">process_data_to_document</assign>
+            <assign to="root_element">BPError</assign>
+            <assign to="xPath">/ProcessData</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Response Service Type">
+          <participant name="BusinessProcessResponseService"/>
+          <output message="BusinessProcessResponseServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">GPL50</assign>
+        <operation name="Inline Invoke : Throw Error">
+          <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+          <output message="InlineInvokeBPTypeInputMessage">
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

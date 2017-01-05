@@ -1,0 +1,121 @@
+<process name="FB_DLK_SWIFT_Route">
+  <rule name="EntityFound">
+    <condition>string-length(FB_DLK_SWIFT_Route/Entity)&gt;0</condition>
+  </rule>
+
+  <sequence name="DLK SWIFT">
+    <operation name="Invoke FB_SWIFT_Route">
+      <participant name="FB_INVOKE_SUBPROCESS"/>
+      <output message="InvokeSubProcessServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="INVOKE_MODE">INLINE</assign>
+        <assign to="WFD_NAME">FB_SWIFT_Route</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="XSLT: Read Inbound Request">
+      <participant name="FB_XSLT"/>
+      <output message="XSLTServiceTypeInputMessage">
+        <assign to="check_memory_requirements">FALSE</assign>
+        <assign to="incremental_transform">FALSE</assign>
+        <assign to="xml_input_from">PrimaryDoc</assign>
+        <assign to="xml_input_validation">NO</assign>
+        <assign to="xslt_name">SFG_GPL_ReadInboundRequest</assign>
+        <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="FB_DLK_SWIFT_Route" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/*" append="true"></assign>
+      </input>
+    </operation>
+
+    <operation name="JDBC: Find ROI Entity">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="param1" from="string(FB_DLK_SWIFT_Route/RequestorDN)"></assign>
+        <assign to="param2" from="string(FB_DLK_SWIFT_Route/ResponderDN)"></assign>
+        <assign to="param3">GPL</assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="sql">SELECT ENTITY FROM SCT_ENTITY WHERE UPPER(ROUTE_REQUESTORDN)= UPPER(?) AND UPPER(ROUTE_RESPONDERDN) = UPPER(?) AND SERVICE=?</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="FB_DLK_SWIFT_Route/Entity" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//ENTITY)"></assign>
+      </input>
+    </operation>
+
+    <choice name="Found Entity?">
+      <select>
+        <case ref="EntityFound" negative="true" activity="NoEntity"/>
+      </select>
+
+      <sequence name="NoEntity">
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode">The Sender BIC for the Datalink file is not configured in the system</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+    <sequence name="File Type Mapping">
+      <assign name="Assign" to="FB_DLK_SWIFT_Route/FormatType" from="sci-get-property(&apos;gpl&apos;, concat(&apos;gpl.rtm.&apos;,string(FB_DLK_SWIFT_Route/RequestType)))"></assign>
+      <onFault>
+        <sequence name="NoFileTypeMapping">
+          <assign name="Assign" to="FB_DLK_SWIFT_Route/FormatType">DLINK.DL</assign>
+        </sequence>
+      </onFault>
+    </sequence>
+    <assign name="Assign" to="FB_DLK_SWIFT_Route/Format" from="substring-before(FB_DLK_SWIFT_Route/FormatType,&apos;.&apos;)"></assign>
+    <assign name="Assign" to="FB_DLK_SWIFT_Route/FileType" from="substring-after(FB_DLK_SWIFT_Route/FormatType,&apos;.&apos;)"></assign>
+    <assign name="Assign" to="FB_DLK_SWIFT_Route/RFilename" from="concat(FB_DLK_SWIFT_Route/Entity,&apos;.&apos; , FB_DLK_SWIFT_Route/Format,&apos;.&apos; , FB_DLK_SWIFT_Route/FileType,&apos;.&apos; , FB_DLK_SWIFT_Route/Compression)"></assign>
+    <assign name="Assign" to="FB_DLK_SWIFT_Route/IFilename" from="concat(FB_DLK_SWIFT_Route/RFilename, &apos;_&apos;, FB_SWIFT_Route/Filename)"></assign>
+    <operation name="Mailbox Add: /SWIFTNet/Datalink">
+      <participant name="FB_MAILBOXADD"/>
+      <output message="MailboxAddServiceTypeInputMessage">
+        <assign to="Extractable">YES</assign>
+        <assign to="MailboxPath">/SWIFTNet/Datalink</assign>
+        <assign to="MessageName" from="string(FB_DLK_SWIFT_Route/IFilename)"></assign>
+        <assign to="PrimaryDocument" from="FB_SWIFT_Route/Filesource/@SCIObjectID"></assign>
+        <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+      </output>
+      <input message="inmsg">
+      </input>
+    </operation>
+
+    <onFault>
+      <sequence name="FBK117">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK115</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business ProcessException">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode">The Datalink file could not be routed</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

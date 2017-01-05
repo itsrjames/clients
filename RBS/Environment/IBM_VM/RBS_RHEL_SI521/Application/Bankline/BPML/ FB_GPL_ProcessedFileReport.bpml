@@ -1,0 +1,119 @@
+<process name="FB_GPL_ProcessedFileReport">
+  <sequence name="PFR">
+    <operation name="Timestamp Utility">
+      <participant name="TimestampUtilService"/>
+      <output message="TimestampUtilServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="action">current_time</assign>
+        <assign to="format">yyyy-MM-dd HH:mm:ss</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="ReportDate" from="string(time)" append="true"></assign>
+      </input>
+    </operation>
+
+    <operation name="JDBC: Query Processed Files">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1" from="string(ReportDate)"></assign>
+        <assign to="param10" from="string(ReportDate)"></assign>
+        <assign to="param11" from="string(ReportDate)"></assign>
+        <assign to="param2" from="string(ReportDate)"></assign>
+        <assign to="param3" from="string(ReportDate)"></assign>
+        <assign to="param4" from="string(ReportDate)"></assign>
+        <assign to="param5" from="string(ReportDate)"></assign>
+        <assign to="param6" from="string(ReportDate)"></assign>
+        <assign to="param7" from="string(ReportDate)"></assign>
+        <assign to="param8" from="string(ReportDate)"></assign>
+        <assign to="param9" from="string(ReportDate)"></assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="paramtype10">String</assign>
+        <assign to="paramtype11">String</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="paramtype4">String</assign>
+        <assign to="paramtype5">String</assign>
+        <assign to="paramtype6">String</assign>
+        <assign to="paramtype7">String</assign>
+        <assign to="paramtype8">String</assign>
+        <assign to="paramtype9">String</assign>
+        <assign to="sql">/* Query for GPL files including BAO files FILE_NAME=filename sent to B2B/Mainframe CUSTOMER_FILNAME=filename submitted by customer */ SELECT DISTINCT FILE_NAME, CUSTOMER_FILENAME, DATAFLOW_ID,DIRECTION  FROM (   /* Inbound GPL files*/  SELECT d.FILENAME as FILE_NAME, f.CUSTOMER_FILENAME as CUSTOMER_FILENAME, LPAD(F.DATAFLOW_ID,11,&apos;0&apos;) as DATAFLOW_ID, &apos;IN&apos; AS DIRECTION, d.MODIFYTS   FROM FB_FILE f, FG_DELIVERY d, FG_ROUTE r   WHERE f.DATAFLOW_ID = d.DATA_FLOW_ID   AND d.ROUTE_KEY=r.ROUTE_KEY   AND r.CONS_ORG_KEY=&apos;B2B&apos;   AND d.STATE = &apos;Complete&apos;   AND f.FILE_ID IN (        /* GET the first instance of the FILE_ID in case the operator has renamed the file*/        SELECT FILE_ID FROM      (             SELECT MIN(FILE_ID) as FILE_ID, DATAFLOW_ID             FROM FB_FILE             WHERE ARCHIVED=0             AND OUTBOUND=0             AND CREATED&lt;TO_DATE( ?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)             GROUP BY DATAFLOW_ID        )   )  )  WHERE MODIFYTS &gt;= (       /* GEt the last time the PFR was run*/       SELECT LAST_MODIFIED AS LAST_REPORT_RUN       FROM (               SELECT LAST_MODIFIED                 FROM FB_FILE                WHERE REPORTED=1                ORDER BY LAST_MODIFIED DESC           )           WHERE ROWNUM=1    )         UNION        /* Inbound BAO files*/ SELECT  cs.VALUE as FILE_NAME, CUSTOMER_FILENAME, DATAFLOW_ID,DIRECTION  FROM (   SELECT DISTINCT FILE_NAME, CUSTOMER_FILENAME, DATAFLOW_ID,DIRECTION    FROM (     SELECT d.FILENAME as FILE_NAME, f.CUSTOMER_FILENAME as CUSTOMER_FILENAME, LPAD(F.DATAFLOW_ID,11,&apos;0&apos;) as DATAFLOW_ID, &apos;IN&apos; AS DIRECTION, d.MODIFYTS, f.REPORTED    FROM FB_FILE f, FG_DELIVERY d, FG_ROUTE r    WHERE f.DATAFLOW_ID = d.DATA_FLOW_ID     AND d.ROUTE_KEY=r.ROUTE_KEY    AND r.CONS_ORG_KEY=&apos;FileBroker&apos;    AND d.STATE = &apos;Complete&apos;     AND f.FILE_ID IN (         /* GET the first instance of the FILE_ID in case the operator has renamed the file*/          SELECT FILE_ID     FROM      (               SELECT MIN(FILE_ID) as FILE_ID, DATAFLOW_ID               FROM FB_FILE               WHERE ARCHIVED=0               AND OUTBOUND=0               AND CREATED&lt;TO_DATE( ?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)               GROUP BY DATAFLOW_ID         )    )   )    WHERE (MODIFYTS &gt;= (        /* GEt the last time the PFR was run*/         SELECT LAST_MODIFIED AS LAST_REPORT_RUN         FROM          (                   SELECT LAST_MODIFIED                   FROM FB_FILE f, FG_DELIVERY d, FG_ROUTE r                WHERE REPORTED=1     AND f.DATAFLOW_ID = d.DATA_FLOW_ID       AND d.ROUTE_KEY=r.ROUTE_KEY      AND r.CONS_ORG_KEY=&apos;FileBroker&apos;      AND d.STATE = &apos;Complete&apos;                   ORDER BY LAST_MODIFIED DESC                     )                WHERE ROWNUM=1         )       OR REPORTED=0) ) tmp, DATA_FLOW df, CORRELATION_SET cs, FB_DOC_STORAGE ds, FG_DELIVERY d    WHERE df.DATA_FLOW_ID=tmp.DATAFLOW_ID   AND d.DATA_FLOW_ID = df.DATA_FLOW_ID  AND d.CONSUMER_DOCID=ds.DOC_ID    AND cs.OBJECT_ID=ds.READ_WFID    AND TYPE=&apos;BUSINESS PROCESS&apos;    AND NAME=&apos;Mailbox_MessageName&apos;    UNION  /*Inbound rejected BAO files*/ SELECT  FILE_NAME, CUSTOMER_FILENAME, DATAFLOW_ID,DIRECTION FROM (  SELECT DISTINCT FILE_NAME, CUSTOMER_FILENAME, DATAFLOW_ID,DIRECTION   FROM (    SELECT d.FILENAME as FILE_NAME, f.CUSTOMER_FILENAME as CUSTOMER_FILENAME, LPAD(F.DATAFLOW_ID,11,&apos;0&apos;) as DATAFLOW_ID, &apos;IN&apos; AS DIRECTION, d.MODIFYTS, f.REPORTED   FROM FB_FILE f, FG_DELIVERY d, FG_ROUTE r   WHERE f.DATAFLOW_ID = d.DATA_FLOW_ID    AND d.ROUTE_KEY=r.ROUTE_KEY   AND r.CONS_ORG_KEY=&apos;FileBroker&apos;   AND d.STATE = &apos;Complete&apos;    AND f.FILE_ID IN (     /* GET the first instance of the FILE_ID in case the operator has renamed the file*/         SELECT FILE_ID FROM      (              SELECT MIN(FILE_ID) as FILE_ID, DATAFLOW_ID              FROM FB_FILE              WHERE ARCHIVED=0              AND OUTBOUND=0            AND CREATED&lt;TO_DATE(?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)              GROUP BY DATAFLOW_ID         )    )   )   WHERE (MODIFYTS &gt;= (     /* GEt the last time the PFR was run*/        SELECT LAST_MODIFIED AS LAST_REPORT_RUN        FROM (                  SELECT LAST_MODIFIED                   FROM FB_FILE f, FG_DELIVERY d, FG_ROUTE r                WHERE REPORTED=1     AND f.DATAFLOW_ID = d.DATA_FLOW_ID       AND d.ROUTE_KEY=r.ROUTE_KEY      AND r.CONS_ORG_KEY=&apos;FileBroker&apos;      AND d.STATE = &apos;Complete&apos;                   ORDER BY LAST_MODIFIED DESC             )             WHERE ROWNUM=1     )   OR REPORTED=0) ) tmp, DATA_FLOW df, FG_DELIVERY d WHERE df.DATA_FLOW_ID=tmp.DATAFLOW_ID AND d.DATA_FLOW_ID=df.DATA_FLOW_ID AND d.CONSUMER_DOCID NOT IN (  SELECT DOC_ID FROM FB_DOC_STORAGE )  UNION  /*Outbound GPL files and BAO FSNs*/ SELECT FILE_NAME, CUSTOMER_FILENAME, DATAFLOW_ID, DIRECTION  FROM (   SELECT DISTINCT a.FILE_NAME as FILE_NAME, f.CUSTOMER_FILENAME, LPAD(f.DATAFLOW_ID,11,&apos;0&apos;) as DATAFLOW_ID, &apos;OUT&apos; as DIRECTION   FROM FG_ARRIVEDFILE a, FB_FILE f   WHERE a.DATA_FLOW_ID = f.DATAFLOW_ID   AND f.ARCHIVED=0   AND f.OUTBOUND=1   AND f.REPORTED=0   AND f.CREATED&lt;TO_DATE( ?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)   AND a.ARRIVEDFILE_KEY IN (        /* GET the first instance of the ARRIVEDFILE_KEY in case the operator has renamed the original file*/        SELECT ARRIVEDFILE_KEY    FROM      (             SELECT MIN(a.ARRIVEDFILE_KEY) as ARRIVEDFILE_KEY, a.DATA_FLOW_ID             FROM FG_ARRIVEDFILE a, FG_ROUTE r, FG_ROUTCHAN rc, FG_ROUTCHAN_TMPL rct     WHERE (a.PROD_ORG_KEY=&apos;B2B&apos;  OR a.PROD_ORG_KEY=&apos;FileBroker&apos;)      AND r.ARRIVEDFILE_KEY=a.ARRIVEDFILE_KEY     AND r.ROUTCHAN_KEY  = rc.ROUTCHAN_KEY     AND rc.ROUTCHAN_TMPL_KEY = rct.ROUTCHAN_TMPL_KEY     AND rct.TMPL_NAME IN (&apos;GPL_Outbound&apos;, &apos;GPL_FSN_Outbound&apos;)      AND a.CREATETS&lt;TO_DATE( ?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)            GROUP BY a.DATA_FLOW_ID       )   )         UNION       SELECT a.FILE_NAME, SUBSTR(d.FILENAME, INSTR(d.FILENAME, &apos;_&apos;)+1) as CUSTOMER_FILENAME, LPAD(a.DATA_FLOW_ID,11,&apos;0&apos;) as DATAFLOW_ID, &apos;OUT&apos; as DIRECTION    FROM FG_DELIVERY d, FG_ARRIVEDFILE a, FG_ROUTE r, FG_ROUTCHAN rc, FG_ROUTCHAN_TMPL rct    WHERE r.ROUTE_KEY=d.ROUTE_KEY     AND R.ARRIVEDFILE_KEY= a.ARRIVEDFILE_KEY    AND r.ROUTCHAN_KEY  = rc.ROUTCHAN_KEY   AND rc.ROUTCHAN_TMPL_KEY = rct.ROUTCHAN_TMPL_KEY   AND rct.TMPL_NAME IN (&apos;GPL_Outbound&apos;, &apos;GPL_FSN_Outbound&apos;)    AND d.MODIFYTS &gt;= (         /* GEt the last time the PFR was run*/         SELECT LAST_MODIFIED AS LAST_REPORT_RUN         FROM         (                  SELECT LAST_MODIFIED                   FROM FB_FILE                  WHERE REPORTED=1                  ORDER BY LAST_MODIFIED DESC             )             WHERE ROWNUM=1      )    AND d.MODIFYTS &lt;TO_DATE( ?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)    AND a.DATA_FLOW_ID IN (    SELECT DATAFLOW_ID     FROM FB_FILE f     WHERE f.CREATED&lt;TO_DATE( ?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)     AND F.REPORTED=1     AND ARCHIVED=0     AND OUTBOUND=1   )        UNION    /*Outbound BAO files*/   SELECT a.FILE_NAME, CUSTOMER_FILENAME, DATAFLOW_ID, DIRECTION     FROM (     SELECT DISTINCT a.FILE_NAME as FILE_NAME, f.CUSTOMER_FILENAME, LPAD(f.DATAFLOW_ID,11,&apos;0&apos;) as DATAFLOW_ID, &apos;OUT&apos; as DIRECTION     FROM FG_ARRIVEDFILE a, FB_FILE f     WHERE a.DATA_FLOW_ID = f.DATAFLOW_ID     AND f.ARCHIVED=0     AND f.OUTBOUND=1     AND f.REPORTED=0     AND f.CREATED&lt;TO_DATE(  ?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)     AND a.ARRIVEDFILE_KEY IN (          /* GET the first instance of the ARRIVEDFILE_KEY in case the operator has renamed the original file*/          SELECT ARRIVEDFILE_KEY      FROM      (               SELECT MIN(ARRIVEDFILE_KEY) as ARRIVEDFILE_KEY, DATA_FLOW_ID               FROM FG_ARRIVEDFILE               WHERE (PROD_ORG_KEY=&apos;FileSplitter&apos; )              AND CREATETS&lt;TO_DATE(  ?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)               GROUP BY DATA_FLOW_ID          )     )         UNION          SELECT a.FILE_NAME, SUBSTR(d.FILENAME, INSTR(d.FILENAME, &apos;_&apos;)+1) as CUSTOMER_FILENAME, LPAD(a.DATA_FLOW_ID,11,&apos;0&apos;) as DATAFLOW_ID, &apos;OUT&apos; as DIRECTION     FROM FG_DELIVERY d, FG_ARRIVEDFILE a, FG_ROUTE r     WHERE r.ROUTE_KEY=d.ROUTE_KEY      AND R.ARRIVEDFILE_KEY= a.ARRIVEDFILE_KEY     AND d.MODIFYTS &gt;= (          /* GEt the last time the PFR was run*/          SELECT LAST_MODIFIED AS LAST_REPORT_RUN          FROM         (                   SELECT LAST_MODIFIED                    FROM FB_FILE                   WHERE REPORTED=1                   ORDER BY LAST_MODIFIED DESC              )              WHERE ROWNUM=1       )     AND d.MODIFYTS &lt;TO_DATE(  ?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)     AND a.DATA_FLOW_ID IN (     SELECT DATAFLOW_ID      FROM FB_FILE f      WHERE f.CREATED&lt;TO_DATE(  ?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)      AND F.REPORTED=1      AND ARCHIVED=0      AND OUTBOUND=1    )     )  tmp, FG_EVENT e, FG_EVENTATTR ea, FG_ARRIVEDFILE a    WHERE e.EVENT_KEY = ea.EVENT_KEY     AND a.ARRIVEDFILE_KEY=e.ARRIVEDFILE_KEY    AND e.EVENT_CODE=&apos;FB_8031&apos;    AND ea.NAME=&apos;Filename&apos;    AND ea.VALUE=tmp.FILE_NAME ) ORDER BY CUSTOMER_FILENAME</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="XSLT: Format report">
+      <participant name="FB_XSLT"/>
+      <output message="XSLTServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="xslt_name">FB_GPL_ProcessedFileReport</assign>
+        <assign to="xml_input_from">PrimaryDoc</assign>
+        <assign to="xml_input_validation">NO</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="BP Metadata: Get WFID">
+      <participant name="FB_BPMETADATA"/>
+      <output message="BPMetaDataServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="WFID" from="BPDATA/WORKFLOW_ID/text()"></assign>
+      </input>
+    </operation>
+
+    <operation name="Mailbox Add Service">
+      <participant name="FB_MAILBOXADD"/>
+      <output message="MailboxAddServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="Extractable">YES</assign>
+        <assign to="MessageName" from="concat(sci-get-property(&apos;fbgpl&apos;, &apos;FSN.Unknown.CSID&apos;),&apos;.RPDLM.RP.0_&apos;, WFID)"></assign>
+        <assign to="MailboxPath">/FileBroker/GPL/B2B</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="JDBC: Update FB_FILE as reported">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1" from="string(ReportDate)"></assign>
+        <assign to="param2" from="string(ReportDate)"></assign>
+        <assign to="param3" from="string(ReportDate)"></assign>
+        <assign to="param4" from="string(ReportDate)"></assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="paramtype4">String</assign>
+        <assign to="query_type">UPDATE</assign>
+        <assign to="sql">UPDATE FB_FILE  SET REPORTED=1, LAST_MODIFIED=sysdate WHERE (  (   ARCHIVED=0      AND CREATED&lt;TO_DATE(?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)     AND REPORTED=0  )   OR (    FILE_ID IN (     SELECT MAX(FILE_ID) FROM FB_FILE WHERE  0=(      SELECT COUNT(*)      FROM FB_FILE      WHERE ARCHIVED=0        AND CREATED&lt;TO_DATE(?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)       AND REPORTED=0     )   )   ) ) AND DATAFLOW_ID NOT IN (   SELECT DATAFLOW_ID    FROM (      SELECT LPAD(F.DATAFLOW_ID,11,&apos;0&apos;) as DATAFLOW_ID, d.MODIFYTS      FROM FB_FILE f, FG_DELIVERY d, FG_ROUTE r     WHERE f.DATAFLOW_ID = d.DATA_FLOW_ID      AND d.ROUTE_KEY=r.ROUTE_KEY     AND r.CONS_ORG_KEY=&apos;FileBroker&apos;     AND d.STATE = &apos;Complete&apos;      AND f.FILE_ID IN (             SELECT FILE_ID FROM      (                 SELECT MIN(FILE_ID) as FILE_ID, DATAFLOW_ID                 FROM FB_FILE                 WHERE ARCHIVED=0                 AND OUTBOUND=0                 AND CREATED&lt;TO_DATE(?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)                 GROUP BY DATAFLOW_ID          )    )   )    WHERE DATAFLOW_ID NOT IN (    SELECT DATAFLOW_ID    FROM (       SELECT DATAFLOW_ID     FROM (        SELECT LPAD(F.DATAFLOW_ID,11,&apos;0&apos;) as DATAFLOW_ID, d.MODIFYTS        FROM FB_FILE f, FG_DELIVERY d, FG_ROUTE r       WHERE f.DATAFLOW_ID = d.DATA_FLOW_ID        AND d.ROUTE_KEY=r.ROUTE_KEY       AND r.CONS_ORG_KEY=&apos;FileBroker&apos;       AND d.STATE = &apos;Complete&apos;        AND f.FILE_ID IN (               SELECT FILE_ID FROM      (                  SELECT MIN(FILE_ID) as FILE_ID, DATAFLOW_ID                  FROM FB_FILE                  WHERE ARCHIVED=0                  AND OUTBOUND=0                  AND CREATED&lt;TO_DATE(?, &apos;YYYY-MM-DD HH24:MI:SS&apos;)                  GROUP BY DATAFLOW_ID            )       )      )          ) tmp, DATA_FLOW df, CORRELATION_SET cs, FB_DOC_STORAGE ds, FG_DELIVERY d    WHERE df.DATA_FLOW_ID=tmp.DATAFLOW_ID       AND d.DATA_FLOW_ID = df.DATA_FLOW_ID    AND d.CONSUMER_DOCID=ds.DOC_ID       AND cs.OBJECT_ID=ds.READ_WFID       AND cs.TYPE=&apos;BUSINESS PROCESS&apos;       AND cs.NAME=&apos;Mailbox_MessageName&apos;   )   AND DATAFLOW_ID NOT IN (         SELECT  DATAFLOW_ID         FROM (             SELECT DISTINCT DATAFLOW_ID              FROM (                   SELECT LPAD(F.DATAFLOW_ID,11,&apos;0&apos;) as DATAFLOW_ID, d.MODIFYTS                   FROM FB_FILE f, FG_DELIVERY d, FG_ROUTE r                 WHERE f.DATAFLOW_ID = d.DATA_FLOW_ID                  AND d.ROUTE_KEY=r.ROUTE_KEY                 AND r.CONS_ORG_KEY=&apos;FileBroker&apos;                 AND d.STATE = &apos;Complete&apos;                  AND f.FILE_ID IN (                              SELECT FILE_ID FROM      (                                   SELECT MIN(FILE_ID) as FILE_ID, DATAFLOW_ID                                  FROM FB_FILE                                  WHERE ARCHIVED=0                                  AND OUTBOUND=0                                AND CREATED&lt;TO_DATE(&apos;2020-03-01&apos;, &apos;YYYY-MM-DD HH24:MI:SS&apos;)                                  GROUP BY DATAFLOW_ID                          )                   )               )              WHERE MODIFYTS &gt;= (                        SELECT LAST_MODIFIED AS LAST_REPORT_RUN                      FROM (                                  SELECT LAST_MODIFIED                                   FROM FB_FILE f, FG_DELIVERY d, FG_ROUTE r                                WHERE REPORTED=1                     AND f.DATAFLOW_ID = d.DATA_FLOW_ID                       AND d.ROUTE_KEY=r.ROUTE_KEY                      AND r.CONS_ORG_KEY=&apos;FileBroker&apos;                      AND d.STATE = &apos;Complete&apos;                                   ORDER BY LAST_MODIFIED DESC                           )                          WHERE ROWNUM=1                )          ) tmp, DATA_FLOW df, FG_DELIVERY d         WHERE df.DATA_FLOW_ID=tmp.DATAFLOW_ID         AND d.DATA_FLOW_ID=df.DATA_FLOW_ID         AND d.CONSUMER_DOCID NOT IN (             SELECT DOC_ID FROM FB_DOC_STORAGE         )        ) )</assign>
+      </output>
+      <input message="inmsg">
+      </input>
+    </operation>
+
+    <onFault>
+      <sequence name="FBK060">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK060</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

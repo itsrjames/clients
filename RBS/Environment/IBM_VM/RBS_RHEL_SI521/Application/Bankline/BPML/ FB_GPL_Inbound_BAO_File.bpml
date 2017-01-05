@@ -1,0 +1,400 @@
+<process name="FB_GPL_Inbound_BAO_File">
+  <rule name="RejectionFSN">
+    <condition>string(GPLFileType)=&apos;FR&apos;</condition>
+  </rule>
+
+  <rule name="IsErrorHandled">
+    <condition>count(GPL/FSN/File)&gt;0 or string-length(GPL/RRCode)&gt;0</condition>
+  </rule>
+
+  <rule name="IsRRCode">
+    <condition>string-length(GPL/RRCode)&gt;0</condition>
+  </rule>
+
+  <rule name="IsFSNFile">
+    <condition>count(GPL/FSN/File)&gt;0</condition>
+  </rule>
+
+  <rule name="ValidationWarnings">
+    <condition>count(TranslationReport)&gt;0</condition>
+  </rule>
+
+  <sequence name="Main">
+    <sequence name="Process BAO File">
+      <sequence name="SubFlowA: Check GPL FSN">
+        <sequence name="GPL FSN">
+          <choice name="Rejection FSN?">
+            <select>
+              <case ref="RejectionFSN" activity="RejectedGPLFile"/>
+            </select>
+
+            <sequence name="RejectedGPLFile">
+              <operation name="Assign: Set FSN values">
+                <participant name="AssignService"/>
+                <output message="AssignServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="GPL/FSN/Format" from="string(GPLFileFormat)"></assign>
+                  <assign to="GPL/FSN/Type" from="string(GPLFileType)"></assign>
+                  <assign to="GPL/FSN/File" from="PrimaryDocument/@SCIObjectID"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+              <operation name="JDBC: Query for the original arrived file Doc ID">
+                <participant name="FB_LWJDBC"/>
+                <output message="LightweightJDBCAdapterTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="param1" from="string(RouteDataflowId)"></assign>
+                  <assign to="paramtype1">String</assign>
+                  <assign to="sql">SELECT af.DOCUMENT_ID FROM FG_ARRIVEDFILE af WHERE af.DATA_FLOW_ID=?</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="DocumentId" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//row[1]/DOCUMENT_ID)"></assign>
+                </input>
+              </operation>
+
+              <operation name="This: Load original arrived file Doc">
+                <participant name="This"/>
+                <output message="takeDocumentRequest">
+                  <assign to="." from="*"></assign>
+                  <assign to="documentId" from="string(DocumentId)"></assign>
+                  <assign to="documentKey">PrimaryDocument</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+              <operation name="Business Process Exception">
+                <participant name="FB_BPEXCEPTION"/>
+                <output message="BPExceptionServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="exceptionCode">BAO File has been rejected by GPL Inbound processing</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </choice>
+        </sequence>
+      </sequence>
+      <sequence name="SubFlowB: Process Import BAO">
+        <sequence name="Process Import BAO">
+          <sequence name="Validate">
+            <operation name="Translation: Validate Import BAO">
+              <participant name="FB_TRANSLATION"/>
+              <output message="TranslationTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="useStreams">YES</assign>
+                <assign to="validate_input">YES</assign>
+                <assign to="validate_output">YES</assign>
+                <assign to="output_to_process_data">NO</assign>
+                <assign to="output_report_to_process_data">true</assign>
+                <assign to="exhaust_input">YES</assign>
+                <assign to="map_name">FB_GPL_ValidateBAOImport</assign>
+                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                <assign to="." from="TranslationReport"></assign>
+              </input>
+            </operation>
+
+            <choice name="TranslationWarnings?">
+              <select>
+                <case ref="ValidationWarnings" activity="Validaton Warnings"/>
+              </select>
+
+              <sequence name="Validaton Warnings">
+                <operation name="Business Process Exception">
+                  <participant name="FB_BPEXCEPTION"/>
+                  <output message="BPExceptionServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="exceptionCode">BAOImport file has validation warnings</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+              </sequence>
+            </choice>
+            <onFault>
+              <sequence name="Handle Validation Error">
+                <assign name="Assign" to="GPL/RRCode">GPL_RR08</assign>
+                <operation name="XSLT: Create RR report">
+                  <participant name="FB_XSLT"/>
+                  <output message="XSLTServiceTypeInputMessage">
+                    <assign to="check_memory_requirements">FALSE</assign>
+                    <assign to="xslt_name">FB_Format_Trans_Report</assign>
+                    <assign to="xml_input_from">PrimaryDoc</assign>
+                    <assign to="xml_input_validation">NO</assign>
+                    <assign to="PrimaryDocument" from="TranslationReport/@SCIObjectID"></assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="GPL" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//RRReport"></assign>
+                  </input>
+                </operation>
+
+                <operation name="Business Process Exception">
+                  <participant name="FB_BPEXCEPTION"/>
+                  <output message="BPExceptionServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="exceptionCode">BAOImport file has failed validation</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+              </sequence>
+            </onFault>
+          </sequence>
+          <operation name="JDBC: Query Bankline for Brand">
+            <participant name="FB_BL_LWJDBC"/>
+            <output message="LightweightJDBCAdapterTypeInputMessage">
+              <assign to="param2">BRAND_CODE</assign>
+              <assign to="paramtype2">String</assign>
+              <assign to="paramtype3">String</assign>
+              <assign to="param3">RESPONSE_AREA</assign>
+              <assign to="query_type">PROCEDURE</assign>
+              <assign to="param1" from="string(GPLCSID)"></assign>
+              <assign to="paramtype1">Double</assign>
+              <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;BLSchema&apos;), &apos;.YJSC11_GETCUSTBRND(?,?,?)&apos;)"></assign>
+              <assign to="paramDirection3">OUT</assign>
+              <assign to="paramDirection2">OUT</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="YJSC11Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM2)"></assign>
+              <assign to="GPLBrand" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+            </input>
+          </operation>
+
+          <operation name="FBDocStore - store import BAO file">
+            <participant name="FB_DOC_STORE"/>
+            <output message="FileBrokerDocStoreInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="Group3Key" from="string(GPLCSID)"></assign>
+              <assign to="MetaData2" from="string(RouteID)"></assign>
+              <assign to="Group1Key">GPLBAOImport</assign>
+              <assign to="Group2Key" from="string(GPLBrand)"></assign>
+              <assign to="MetaData1" from="string(PFilename)"></assign>
+              <assign to="Input">SingleDoc</assign>
+              <assign to="MetaData3" from="string(RouteDataflowId)"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Assign: Set FSN values">
+            <participant name="AssignService"/>
+            <output message="AssignServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="GPL/FSN/Format">FBXML</assign>
+              <assign to="GPL/FSN/Type">FA</assign>
+              <assign to="GPL/FSN/Status">A</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="XSLT: Create Acceptance FSN">
+            <participant name="FB_XSLT"/>
+            <output message="XSLTServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="check_memory_requirements">FALSE</assign>
+              <assign to="xslt_name">FB_Create_FSN</assign>
+              <assign to="xml_input_from">ProcData</assign>
+              <assign to="additional_xslt_params" from="concat(&apos;Status=&apos;, GPL/FSN/Status)"></assign>
+              <assign to="input_pd_xpath">/ProcessData</assign>
+              <assign to="xml_input_validation">NO</assign>
+              <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="GPL/FSN/File" from="PrimaryDocument/@SCIObjectID"></assign>
+            </input>
+          </operation>
+
+          <operation name="FGRouteEvent: FB_8011">
+            <participant name="FileGatewayRouteEventService"/>
+            <output message="FileGatewayRouteEventServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="EventCode">FB_8011</assign>
+              <assign to="ExceptionLevel">Normal</assign>
+              <assign to="EventAttributes/Filename" from="string(PFilename)" append="true"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </sequence>
+      <onFault>
+        <sequence name="FB_8062">
+          <choice name="HandledError?">
+            <select>
+              <case ref="IsErrorHandled" activity="Handled"/>
+              <case ref="IsErrorHandled" negative="true" activity="InternalError"/>
+            </select>
+
+            <sequence name="Handled">
+              <assign name="Assign" to="RouteOnErrorStatus">true</assign>
+            </sequence>
+            <sequence name="InternalError">
+              <operation name="Business Process Exception">
+                <participant name="FB_BPEXCEPTION"/>
+                <output message="BPExceptionServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="exceptionCode">The GPL BAO file could not be processed. No FSN will be sent to the customer</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </choice>
+        </sequence>
+      </onFault>
+    </sequence>
+    <sequence name="SubFlowC: Process FSN">
+      <sequence name="Process FSN">
+        <choice name="Create Rejection FSN?">
+          <select>
+            <case ref="IsRRCode" activity="Create Rejection FSN"/>
+          </select>
+
+          <sequence name="Create Rejection FSN">
+            <operation name="Assign: Set FSN values">
+              <participant name="AssignService"/>
+              <output message="AssignServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="GPL/FSN/Format">FBXML</assign>
+                <assign to="GPL/FSN/Type">FR</assign>
+                <assign to="GPL/RRDescription" from="sci-get-property(&apos;fbgpl&apos;, concat(&apos;FSN.Description.&apos;,GPL/RRCode))"></assign>
+                <assign to="GPL/FSN/Status">R</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="XSLT: Create Rejection FSN">
+              <participant name="FB_XSLT"/>
+              <output message="XSLTServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="check_memory_requirements">FALSE</assign>
+                <assign to="xslt_name">FB_Create_FSN</assign>
+                <assign to="xml_input_from">ProcData</assign>
+                <assign to="additional_xslt_params" from="concat(&apos;Status=&apos;, GPL/FSN/Status)"></assign>
+                <assign to="input_pd_xpath">/ProcessData</assign>
+                <assign to="xml_input_validation">NO</assign>
+                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="GPL/FSN/File" from="PrimaryDocument/@SCIObjectID"></assign>
+              </input>
+            </operation>
+
+            <operation name="FGRouteEvent: FB_8061">
+              <participant name="FileGatewayRouteEventService"/>
+              <output message="FileGatewayRouteEventServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="EventCode">FB_8061</assign>
+                <assign to="ExceptionLevel">Abnormal</assign>
+                <assign to="EventAttributes/Filename" from="string(PFilename)" append="true"></assign>
+                <assign to="EventAttributes/RRCode" from="string(GPL/RRCode)" append="true"></assign>
+                <assign to="EventAttributes/RRDescription" from="string(GPL/RRDescription)" append="true"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+        <sequence name="Deliver FSN">
+          <operation name="Get Doc Info: Get Doc Id to discard Tracking Info">
+            <participant name="FB_GETDOCINFO"/>
+            <output message="GetDocumentInfoServiceTypeInputMessage">
+              <assign to="PrimaryDocument" from="GPL/FSN/File/@SCIObjectID"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="GPL/FSN/DocumentId" from="string(DocumentId)" append="true"></assign>
+            </input>
+          </operation>
+
+          <operation name="Mailbox Add: Deliver FSN">
+            <participant name="FB_MAILBOXADD"/>
+            <output message="MailboxAddServiceTypeInputMessage">
+              <assign to="Extractable">YES</assign>
+              <assign to="MessageName" from="concat(GPLCSID,&apos;.&apos;,GPL/FSN/Format,&apos;.&apos;, GPL/FSN/Type,&apos;.&apos;, GPLFileID, &apos;_FB&apos;,RouterWFID)"></assign>
+              <assign to="DocumentId" from="string(GPL/FSN/DocumentId)"></assign>
+              <assign to="MailboxPath" from="sci-get-property(&apos;fbgpl&apos;, concat(&apos;FSN.&apos;, GPL/FSN/Type, &apos;.Outbound.Mailbox&apos;))"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="GPL/FSN/MessageName" from="string(MessageName)"></assign>
+              <assign to="GPL/FSN/MailboxPath" from="string(MailboxPath)"></assign>
+              <assign to="GPL/FSN/DocId" from="string(DocumentId)"></assign>
+            </input>
+          </operation>
+
+          <assign name="Assign" to="RouteOnErrorStatus">true</assign>
+          <operation name="FGRouteEvent: FB_8015">
+            <participant name="FileGatewayRouteEventService"/>
+            <output message="FileGatewayRouteEventServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="EventCode">FB_8015</assign>
+              <assign to="ExceptionLevel">Normal</assign>
+              <assign to="EventAttributes/DocId" from="string(GPL/FSN/DocId)" append="true"></assign>
+              <assign to="EventAttributes/Filename" from="string(GPL/FSN/MessageName)" append="true"></assign>
+              <assign to="EventAttributes/Mailbox" from="string(GPL/FSN/MailboxPath)" append="true"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Get Document Info: revert to PFilename">
+            <participant name="FB_GETDOCINFO"/>
+            <output message="GetDocumentInfoServiceTypeInputMessage">
+              <assign to="updateMetaDataOnly">true</assign>
+              <assign to="DocumentName" from="string(PFilename)"></assign>
+              <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+              <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+            </output>
+            <input message="inmsg">
+            </input>
+          </operation>
+
+        </sequence>
+      </sequence>
+    </sequence>
+    <onFault>
+      <sequence name="FB_8062">
+        <assign name="Assign" to="RouteOnErrorStatus">false</assign>
+        <operation name="FGRouteEvent: FB_8062">
+          <participant name="FileGatewayRouteEventService"/>
+          <output message="FileGatewayRouteEventServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FB_8062</assign>
+            <assign to="ExceptionLevel">Abnormal</assign>
+            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+            <assign to="EventAttributes/Filename" from="string(PFilename)" append="true"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

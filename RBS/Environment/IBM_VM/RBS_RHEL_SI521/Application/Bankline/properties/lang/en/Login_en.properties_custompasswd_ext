@@ -1,0 +1,1 @@
+nogood=Password policy requires that the password: Contains upper case letters (A-Z), Contains lower case letters (a-z), Contains numbers (0-9), Contains a special characters (! $ % ~ & * () ; : @ # ~ etc.), Not be based on the username, Not contain any dictionary words, Be at least 8 characters long

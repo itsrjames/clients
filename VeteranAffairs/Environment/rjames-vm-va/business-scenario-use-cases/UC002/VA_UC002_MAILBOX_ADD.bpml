@@ -1,0 +1,29 @@
+<process name="VA_UC002_MAILBOX_ADD">
+<!-- 
+Customer	:	Veterans Affairs
+Asset   	:	VA_UC002
+Type		:	Business Process
+Developer	:	Robert James rjames@comresource.com
+Use Case	:	UC002
+Function	:	BP Will Add a file to a mailbox to bootstrap routing.
+				This BP will be bootstrapped from a file being placed
+				within a monitored folder via the VA_AITC_FSA File
+				System Adapter
+ -->
+	<sequence name="MainSequence">
+	    <operation name="Mailbox Add">
+	      <participant name="VA_MAILBOX_ADD"/>
+	      <output message="MailboxAddServiceTypeInputMessage">
+	        <assign to="Extractable">YES</assign>
+	        <assign to="MailboxPath" from="sci-get-property('vauc002','Mailbox')"></assign>
+	        <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+	      </output>
+	      <input message="inmsg">
+	        <assign to="." from="*"></assign>
+	      </input>
+	    </operation>	
+	<onFault>
+		<assign to="DoSomething">OnFault</assign>
+	</onFault>
+	</sequence>
+</process>

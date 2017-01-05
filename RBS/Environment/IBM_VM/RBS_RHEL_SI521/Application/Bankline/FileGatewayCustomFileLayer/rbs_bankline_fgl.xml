@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SI_RESOURCES xmlns="http://www.stercomm.com/SI/SI_IE_Resources" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" GISVersion="6000" resourceTag="RBS_BANKLINE_FGL" FrameworkVersion="2">
+  <FG_PRODUCER_FILELAYERS>
+    <FgProducerFileLayerType ContainsName="Y" Description="Datalink Inbound File" DisplayLabel="Datalink Inbound File" IsContainer="Y" LayerType="FGC_PDIFC" ProducerFileLayerTypeKey="PDIFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="7">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PDIFC_P1_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PDIFC_P2_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="GPL File Type" DisplayType="String" Ordinal="2" ParameterName="GPLFileType" ProducerFileLayerParameterTypeKey="PDIFC_P3_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL Customer ID" DisplayLabel="GPL Customer ID" DisplayType="String" Ordinal="3" ParameterName="GPLCSID" ProducerFileLayerParameterTypeKey="PDIFC_P4_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="GPL File Format" DisplayType="String" Ordinal="4" ParameterName="GPLFileFormat" ProducerFileLayerParameterTypeKey="PDIFC_P5_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID" DisplayLabel="GPL File ID" DisplayType="String" Ordinal="5" ParameterName="GPLFileID" ProducerFileLayerParameterTypeKey="PDIFC_P6_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Producer Filename set by the Customer" DisplayLabel="Producer Filename" DisplayType="String" Ordinal="6" ParameterName="PFilename" ProducerFileLayerParameterTypeKey="PDIFC_P7_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="Datalink Outbound FSN File Container" DisplayLabel="Datalink Outbound FSN File Container" IsContainer="Y" LayerType="FGC_PDFFC" ProducerFileLayerTypeKey="PDFFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="10">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PDFFC_P1_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PDFFC_P2_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Client Services ID input" DisplayLabel="Client Services ID input" DisplayType="String" Ordinal="2" ParameterName="CSID" ProducerFileLayerParameterTypeKey="PDFFC_P3_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="File Format" DisplayType="String" Ordinal="3" ParameterName="Format" ProducerFileLayerParameterTypeKey="PDFFC_P4_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="File Type" DisplayType="String" Ordinal="4" ParameterName="Type" ProducerFileLayerParameterTypeKey="PDFFC_P5_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID for FSN" DisplayLabel="File ID for FSN" DisplayType="String" Ordinal="5" ParameterName="FSNID" ProducerFileLayerParameterTypeKey="PDFFC_P6_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Reference set by the Producer of the file" DisplayLabel="Producer Reference" DisplayType="String" Ordinal="6" ParameterName="ProducerRef" ProducerFileLayerParameterTypeKey="PDFFC_P7_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Customer filename set by the Producer of the file" DisplayLabel="Producer Filename" DisplayType="String" Ordinal="7" ParameterName="PFilename" ProducerFileLayerParameterTypeKey="PDFFC_P8_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Filename set by the producer for the interface" DisplayLabel="Interface Filename" DisplayType="String" Ordinal="8" ParameterName="IFilename" ProducerFileLayerParameterTypeKey="PDFFC_P9_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Bankline Service" DisplayLabel="Bankline Service" DisplayType="String" Ordinal="9" ParameterName="Service" ProducerFileLayerParameterTypeKey="PDFFC_P10_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="Datalink Outbound File Container" DisplayLabel="Datalink Outbound File Container" IsContainer="Y" LayerType="FGC_PDOFC" ProducerFileLayerTypeKey="PDOFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="9">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PDOFC_P1_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PDOFC_P2_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Client Services ID input" DisplayLabel="Client Services ID input" DisplayType="String" Ordinal="2" ParameterName="CSID" ProducerFileLayerParameterTypeKey="PDOFC_P3_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="File Format" DisplayType="String" Ordinal="3" ParameterName="Format" ProducerFileLayerParameterTypeKey="PDOFC_P4_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="File Type" DisplayType="String" Ordinal="4" ParameterName="Type" ProducerFileLayerParameterTypeKey="PDOFC_P5_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID for FSN" DisplayLabel="File ID for FSN" DisplayType="String" Ordinal="5" ParameterName="FSNID" ProducerFileLayerParameterTypeKey="PDOFC_P6_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Reference set by the Producer of the file" DisplayLabel="Producer Reference" DisplayType="String" Ordinal="6" ParameterName="ProducerRef" ProducerFileLayerParameterTypeKey="PDOFC_P7_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Customer Filename set by the Producer of the file" DisplayLabel="Producer Filename" DisplayType="String" Ordinal="7" ParameterName="PFilename" ProducerFileLayerParameterTypeKey="PDOFC_P8_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Entire Filename set by the producer for the interface" DisplayLabel="Interface Filename" DisplayType="String" Ordinal="8" ParameterName="IFilename" ProducerFileLayerParameterTypeKey="PDOFC_P9_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="FileBroker File Translation" DisplayLabel="FileBroker File Translation" IsContainer="Y" LayerType="FGC_PFBTC" ProducerFileLayerTypeKey="PFBTC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="4">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PFBTC_P1_GUID" ProducerFileLayerTypeKey="PFBTC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PFBTC_P2_GUID" ProducerFileLayerTypeKey="PFBTC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Map Name" DisplayLabel="Map Name" DisplayType="String" Ordinal="2" ParameterName="MapName" ProducerFileLayerParameterTypeKey="PFBTC_P3_GUID" ProducerFileLayerTypeKey="PFBTC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Validate Input (YES or NO)" DisplayLabel="Validate Input" DisplayType="String" Ordinal="3" ParameterName="Validate" ProducerFileLayerParameterTypeKey="PFBTC_P4_GUID" ProducerFileLayerTypeKey="PFBTC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="GPL Inbound Bulk Account Opening File" DisplayLabel="GPL Inbound BAO File" IsContainer="Y" LayerType="FGC_PBAOC" ProducerFileLayerTypeKey="PBAOC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="7">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PBAOC_P1_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PBAOC_P2_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="GPL File Type" DisplayType="String" Ordinal="2" ParameterName="GPLFileType" ProducerFileLayerParameterTypeKey="PBAOC_P3_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL Customer ID" DisplayLabel="GPL Customer ID" DisplayType="String" Ordinal="3" ParameterName="GPLCSID" ProducerFileLayerParameterTypeKey="PBAOC_P4_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="GPL File Format" DisplayType="String" Ordinal="4" ParameterName="GPLFileFormat" ProducerFileLayerParameterTypeKey="PBAOC_P5_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID" DisplayLabel="GPL File ID" DisplayType="String" Ordinal="5" ParameterName="GPLFileID" ProducerFileLayerParameterTypeKey="PBAOC_P6_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Producer Filename set by the Customer" DisplayLabel="Producer Filename" DisplayType="String" Ordinal="6" ParameterName="PFilename" ProducerFileLayerParameterTypeKey="PBAOC_P7_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="GPL Inbound File Container" DisplayLabel="GPL Inbound File Container" IsContainer="Y" LayerType="FGC_PGIFC" ProducerFileLayerTypeKey="PGIFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="5">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PGIFC_P1_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PGIFC_P2_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Process that reads and validates the interface filename" DisplayLabel="Handler Process" DisplayType="String" Ordinal="2" ParameterName="HandlerProcess" ProducerFileLayerParameterTypeKey="PGIFC_P3_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Routing Filename set by the DCG" DisplayLabel="Routing Filename" DisplayType="String" Ordinal="3" ParameterName="RFilename" ProducerFileLayerParameterTypeKey="PGIFC_P4_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Producer Filename set by the Customer" DisplayLabel="Producer Filename" DisplayType="String" Ordinal="4" ParameterName="PFilename" ProducerFileLayerParameterTypeKey="PGIFC_P5_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="GPL Outbound FSN File Container" DisplayLabel="GPL Outbound FSN File Container" IsContainer="Y" LayerType="FGC_PFOFC" ProducerFileLayerTypeKey="PFOFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="9">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PFOFC_P1_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PFOFC_P2_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Client Services ID input" DisplayLabel="Client Services ID input" DisplayType="String" Ordinal="2" ParameterName="CSID" ProducerFileLayerParameterTypeKey="PFOFC_P3_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="File Format" DisplayType="String" Ordinal="3" ParameterName="Format" ProducerFileLayerParameterTypeKey="PFOFC_P4_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="File Type" DisplayType="String" Ordinal="4" ParameterName="Type" ProducerFileLayerParameterTypeKey="PFOFC_P5_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID for FSN" DisplayLabel="File ID for FSN" DisplayType="String" Ordinal="5" ParameterName="FSNID" ProducerFileLayerParameterTypeKey="PFOFC_P6_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Reference set by the Producer of the file" DisplayLabel="Producer Reference" DisplayType="String" Ordinal="6" ParameterName="ProducerRef" ProducerFileLayerParameterTypeKey="PFOFC_P7_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Filename set by the producer for the interface" DisplayLabel="Interface Filename" DisplayType="String" Ordinal="7" ParameterName="IFilename" ProducerFileLayerParameterTypeKey="PFOFC_P8_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Bankline Service" DisplayLabel="Bankline Service" DisplayType="String" Ordinal="8" ParameterName="Service" ProducerFileLayerParameterTypeKey="PFOFC_P9_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="GPL Outbound File Container" DisplayLabel="GPL Outbound File Container" IsContainer="Y" LayerType="FGC_PGOFC" ProducerFileLayerTypeKey="PGOFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="8">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PGOFC_P1_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PGOFC_P2_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Client Services ID input" DisplayLabel="Client Services ID input" DisplayType="String" Ordinal="2" ParameterName="CSID" ProducerFileLayerParameterTypeKey="PGOFC_P3_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="File Format" DisplayType="String" Ordinal="3" ParameterName="Format" ProducerFileLayerParameterTypeKey="PGOFC_P4_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="File Type" DisplayType="String" Ordinal="4" ParameterName="Type" ProducerFileLayerParameterTypeKey="PGOFC_P5_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID for FSN" DisplayLabel="File ID for FSN" DisplayType="String" Ordinal="5" ParameterName="FSNID" ProducerFileLayerParameterTypeKey="PGOFC_P6_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Reference set by the Producer of the file" DisplayLabel="Producer Reference" DisplayType="String" Ordinal="6" ParameterName="ProducerRef" ProducerFileLayerParameterTypeKey="PGOFC_P7_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Filename set by the producer for the interface" DisplayLabel="Interface Filename" DisplayType="String" Ordinal="7" ParameterName="IFilename" ProducerFileLayerParameterTypeKey="PGOFC_P8_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+  </FG_PRODUCER_FILELAYERS>
+  <FG_PRODUCER_FILELAYER_TRANSLATIONS>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_DLK_Inbound_File" ProducerFileLayerTranslationKey="PDIFC_T1_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_DLK_Outbound_FSN_File" ProducerFileLayerTranslationKey="PDFFC_T1_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_DLK_Outbound_File" ProducerFileLayerTranslationKey="PDOFC_T1_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_File_Translation" ProducerFileLayerTranslationKey="PFBTC_T1_GUID" ProducerFileLayerTypeKey="PFBTC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_GPL_Inbound_BAO_File" ProducerFileLayerTranslationKey="PBAOC_T1_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_GPL_Inbound_File" ProducerFileLayerTranslationKey="PGIFC_T1_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_GPL_Outbound_FSN_File" ProducerFileLayerTranslationKey="PFOFC_T1_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_GPL_Outbound_File" ProducerFileLayerTranslationKey="PGOFC_T1_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+  </FG_PRODUCER_FILELAYER_TRANSLATIONS>
+</SI_RESOURCES>

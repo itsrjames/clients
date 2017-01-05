@@ -1,0 +1,805 @@
+<process name="FB_GPL_Outbound_File">
+  <rule name="PS-Type">
+    <condition>string(GPL/Type)=&apos;PS&apos;</condition>
+  </rule>
+
+  <rule name="InactiveCustomer">
+    <condition>translate(GPL/Status, &apos;act&apos;, &apos;ACT&apos;)!=&apos;ACT&apos;</condition>
+  </rule>
+
+  <rule name="StartDateNotReached">
+    <condition>number(GPL/StartDue)&gt;0</condition>
+  </rule>
+
+  <rule name="EndDateReached">
+    <condition>number(GPL/EndDue)&lt;0</condition>
+  </rule>
+
+  <rule name="GZIP">
+    <condition>number(GPL/Compression)=3</condition>
+  </rule>
+
+  <rule name="ZIP">
+    <condition>number(GPL/Compression)=2</condition>
+  </rule>
+
+  <rule name="NoCompression">
+    <condition>number(GPL/Compression)!=2 and number(GPL/Compression)!=3</condition>
+  </rule>
+
+  <rule name="SMIME">
+    <condition>string(GPL/DSigFormat)=&apos;2&apos;
+or
+string(GPL/DSigFormat)=&apos;3&apos;
+or
+string(GPL/DSigFormat)=&apos;4&apos;</condition>
+  </rule>
+
+  <rule name="FA_FR-Type">
+    <condition>string(GPL/Type)=&apos;FR&apos; or string(GPL/Type)=&apos;FA&apos;</condition>
+  </rule>
+
+  <rule name="PC_PD-Type">
+    <condition>string(GPL/Type)=&apos;PC&apos; or string(GPL/Type)=&apos;PD&apos;</condition>
+  </rule>
+
+  <rule name="AI_AE-Type">
+    <condition>string(GPL/Type)=&apos;AI&apos; or string(GPL/Type)=&apos;AE&apos;</condition>
+  </rule>
+
+  <rule name="CA-Type">
+    <condition>string(GPL/Type)=&apos;CA&apos;</condition>
+  </rule>
+
+  <rule name="IP_IR-Type">
+    <condition>string(GPL/Type)=&apos;IP&apos; or string(GPL/Type)=&apos;IR&apos;</condition>
+  </rule>
+
+  <rule name="Unknown Submitter">
+    <condition>string(GPL/CSID)=sci-get-property(&apos;fbgpl&apos;, &apos;FSN.Unknown.CSID&apos;)</condition>
+  </rule>
+
+  <rule name="DSIG Not Set">
+    <condition>string(GPL/DSigFormat)!=&apos;1&apos; 
+and
+string(GPL/DSigFormat)!=&apos;2&apos; 
+and 
+string(GPL/DSigFormat)!=&apos;3&apos;
+and 
+string(GPL/DSigFormat)!=&apos;4&apos;</condition>
+  </rule>
+
+  <rule name="AL-Type">
+    <condition>string(GPL/Type)=&apos;AL&apos;</condition>
+  </rule>
+
+  <rule name="KeywordReplace">
+    <condition>string(GPL/Reformat)=&apos;true&apos;</condition>
+  </rule>
+
+  <rule name="RO_RI-Type">
+    <condition>string(GPL/Type)=&apos;RO&apos; or string(GPL/Type)=&apos;RI&apos;</condition>
+  </rule>
+
+  <sequence name="GPL Outbound">
+    <assign name="Assign" to="GPL" from="/ProcessData/*[local-name()=&apos;IFilename&apos; or local-name()=&apos;CSID&apos; or local-name()=&apos;Format&apos; or local-name()=&apos;Type&apos; or local-name()=&apos;FSNID&apos; or local-name()=&apos;ProducerRef&apos;]"></assign>
+    <sequence name="Verify Format - Type">
+      <assign name="Assign" to="GPL/Description" from="sci-get-property(&apos;fbgpl&apos;, concat(&apos;Outbound.&apos;, GPL/Format, &apos;.&apos;, GPL/Type))"></assign>
+      <onFault>
+        <sequence name="FormatType Error">
+          <operation name="Business Process Exception">
+            <participant name="FB_BPEXCEPTION"/>
+            <output message="BPExceptionServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="exceptionCode">Invalid outbound file format and/or type</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <sequence name="SubFlow: Query Service Agreements">
+      <sequence name="Query SA by Type">
+        <choice name="File Type?">
+          <select>
+            <case ref="PS-Type" activity="PS"/>
+            <case ref="FA_FR-Type" activity="FA-FR"/>
+            <case ref="PC_PD-Type" activity="PC-PD"/>
+            <case ref="AI_AE-Type" activity="AI"/>
+            <case ref="CA-Type" activity="CA"/>
+            <case ref="IP_IR-Type" activity="IP-IR"/>
+            <case ref="AL-Type" activity="AL"/>
+            <case ref="RO_RI-Type" activity="RO-RI"/>
+          </select>
+
+          <sequence name="PS">
+            <operation name="JDBC: Query SA for PSN settings">
+              <participant name="FB_SA_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param2">GPL</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="paramtype3">String</assign>
+                <assign to="param3">PSNOFCH</assign>
+                <assign to="paramtype4">String</assign>
+                <assign to="param4">PSNCOMFL</assign>
+                <assign to="query_type">PROCEDURE</assign>
+                <assign to="param1" from="string(GPL/CSID)"></assign>
+                <assign to="paramtype1">Double</assign>
+                <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;SASchema&apos;), &apos;.YJSC16_CUSTFILPREF(?,?,?,?,?,?,?)&apos;)"></assign>
+                <assign to="param7">RESPONSE_AREA</assign>
+                <assign to="paramtype6">String</assign>
+                <assign to="param6">PSNDSGFT</assign>
+                <assign to="paramtype7">String</assign>
+                <assign to="paramtype5">String</assign>
+                <assign to="param5">PSNCHREF</assign>
+                <assign to="paramDirection7">OUT</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="GPL/DSigFormat" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;PSNDSGFT&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/Channel" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;PSNOFCH&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/EndDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/END_DUE)"></assign>
+                <assign to="YJSC16Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+                <assign to="GPL/DCGRef" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;PSNCHREF&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/StartDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/START_DUE)"></assign>
+                <assign to="GPL/Status" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATUS_CODE/text()"></assign>
+                <assign to="GPL/CREF" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUST_AGMT_REF/text()"></assign>
+                <assign to="GPL/Compression" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;PSNCOMFL&apos;][1]/SERVICE_DETAIL/text()"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+          <sequence name="FA-FR">
+            <operation name="JDBC: Get original channel details">
+              <participant name="FB_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param2">0</assign>
+                <assign to="paramtype2">Integer</assign>
+                <assign to="paramtype3">Integer</assign>
+                <assign to="param3">0</assign>
+                <assign to="param1" from="string(GPL/FSNID)"></assign>
+                <assign to="paramtype1">String</assign>
+                <assign to="sql">SELECT CUSTOMER_FILENAME, CHANNEL, CHANNEL_REFERENCE FROM FB_FILE WHERE DATAFLOW_ID=? AND ARCHIVED=? AND OUTBOUND=? ORDER BY FILE_ID DESC</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="GPL/Channel" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CHANNEL/text()"></assign>
+                <assign to="GPL/FSNFilename" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUSTOMER_FILENAME/text()"></assign>
+                <assign to="GPL/DCGRef" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CHANNEL_REFERENCE/text()"></assign>
+              </input>
+            </operation>
+
+            <operation name="Assign: Set asACTIVE">
+              <participant name="AssignService"/>
+              <output message="AssignServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="GPL/EndDue">0</assign>
+                <assign to="GPL/StartDue">0</assign>
+                <assign to="GPL/Status">ACT</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <choice name="Unknown?">
+              <select>
+                <case ref="Unknown Submitter" activity="Unknown"/>
+                <case ref="Unknown Submitter" negative="true" activity="Known"/>
+              </select>
+
+              <sequence name="Unknown">
+                <operation name="Assign">
+                  <participant name="AssignService"/>
+                  <output message="AssignServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="GPL/Brand" from="sci-get-property(&apos;fbgpl&apos;, &apos;FSN.Unknown.Brand&apos;)"></assign>
+                    <assign to="GPL/CREF" from="sci-get-property(&apos;fbgpl&apos;, &apos;FSN.Unknown.CSID&apos;)"></assign>
+                    <assign to="GPL/DSigFormat" from="sci-get-property(&apos;fbgpl&apos;, &apos;FSN.Unknown.DSigFormat&apos;)"></assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+              </sequence>
+              <sequence name="Known">
+                <operation name="JDBC: Query SA for FR-FA settings">
+                  <participant name="FB_SA_LWJDBC"/>
+                  <output message="LightweightJDBCAdapterTypeInputMessage">
+                    <assign to="param2">GPL</assign>
+                    <assign to="paramtype2">String</assign>
+                    <assign to="paramtype3">String</assign>
+                    <assign to="param3">FSNDSGFT</assign>
+                    <assign to="paramtype4">Long</assign>
+                    <assign to="param4">CUST_AGMT_REF</assign>
+                    <assign to="query_type">PROCEDURE</assign>
+                    <assign to="param1" from="string(GPL/CSID)"></assign>
+                    <assign to="paramtype1">Double</assign>
+                    <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;SASchema&apos;), &apos;.YJSC15_GETCUSTPREF(?,?,?,?,?,?,?)&apos;)"></assign>
+                    <assign to="param7">RESPONSE_AREA</assign>
+                    <assign to="paramtype6">String</assign>
+                    <assign to="param6">SERVICE_DETAIL</assign>
+                    <assign to="paramtype7">String</assign>
+                    <assign to="paramtype5">String</assign>
+                    <assign to="param5">DATA_ELEMENT_CODE</assign>
+                    <assign to="paramDirection4">OUT</assign>
+                    <assign to="paramDirection5">OUT</assign>
+                    <assign to="paramDirection6">OUT</assign>
+                    <assign to="paramDirection7">OUT</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="GPL/DSigFormat" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM3)"></assign>
+                    <assign to="YJSC15Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM4)"></assign>
+                    <assign to="GPL/CREF" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+                  </input>
+                </operation>
+
+              </sequence>
+            </choice>
+          </sequence>
+          <sequence name="PC-PD">
+            <operation name="JDBC: Query SA for PAN settings">
+              <participant name="FB_SA_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param2">GPL</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="paramtype3">String</assign>
+                <assign to="param3">PANOPCHL</assign>
+                <assign to="paramtype4">String</assign>
+                <assign to="param4">PANCOMFL</assign>
+                <assign to="query_type">PROCEDURE</assign>
+                <assign to="param1" from="string(GPL/CSID)"></assign>
+                <assign to="paramtype1">Double</assign>
+                <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;SASchema&apos;), &apos;.YJSC16_CUSTFILPREF(?,?,?,?,?,?,?)&apos;)"></assign>
+                <assign to="param7">RESPONSE_AREA</assign>
+                <assign to="paramtype6">String</assign>
+                <assign to="param6">PANDSGFT</assign>
+                <assign to="paramtype7">String</assign>
+                <assign to="paramtype5">String</assign>
+                <assign to="param5">PANCHREF</assign>
+                <assign to="paramDirection7">OUT</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="GPL/DSigFormat" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;PANDSGFT&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/Channel" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;PANOPCHL&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/EndDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/END_DUE)"></assign>
+                <assign to="YJSC16Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+                <assign to="GPL/Status" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATUS_CODE/text()"></assign>
+                <assign to="GPL/StartDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/START_DUE)"></assign>
+                <assign to="GPL/DCGRef" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;PANCHREF&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/CREF" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUST_AGMT_REF/text()"></assign>
+                <assign to="GPL/Compression" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;PANCOMFL&apos;][1]/SERVICE_DETAIL/text()"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+          <sequence name="AI">
+            <operation name="JDBC: Query SA for AI settings">
+              <participant name="FB_SA_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param1" from="string(GPL/CSID)"></assign>
+                <assign to="param2">GPL</assign>
+                <assign to="param3">AIOPCHNL</assign>
+                <assign to="param4">AICOMFL</assign>
+                <assign to="param5">AICHLREF</assign>
+                <assign to="param6">AIDSGFMT</assign>
+                <assign to="param7">RESPONSE_AREA</assign>
+                <assign to="paramtype1">Double</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="paramtype3">String</assign>
+                <assign to="paramtype4">String</assign>
+                <assign to="paramtype5">String</assign>
+                <assign to="paramtype6">String</assign>
+                <assign to="paramtype7">String</assign>
+                <assign to="query_type">PROCEDURE</assign>
+                <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;SASchema&apos;), &apos;.YJSC16_CUSTFILPREF(?,?,?,?,?,?,?)&apos;)"></assign>
+                <assign to="paramDirection7">OUT</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="GPL/Channel" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;AIOPCHNL&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/Compression" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;AICOMFL&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/CREF" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUST_AGMT_REF/text()"></assign>
+                <assign to="GPL/DCGRef" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;AICHLREF&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/DSigFormat" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;AIDSGFMT&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/EndDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/END_DUE)"></assign>
+                <assign to="GPL/StartDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/START_DUE)"></assign>
+                <assign to="GPL/Status" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATUS_CODE/text()"></assign>
+                <assign to="YJSC16Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+          <sequence name="CA">
+            <operation name="JDBC: Query SA for CA settings">
+              <participant name="FB_SA_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param2">GPL</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="paramtype3">String</assign>
+                <assign to="param3">MIOPCHNL</assign>
+                <assign to="paramtype4">String</assign>
+                <assign to="param4">MICOMPFL</assign>
+                <assign to="query_type">PROCEDURE</assign>
+                <assign to="param1" from="string(GPL/CSID)"></assign>
+                <assign to="paramtype1">Double</assign>
+                <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;SASchema&apos;), &apos;.YJSC16_CUSTFILPREF(?,?,?,?,?,?,?)&apos;)"></assign>
+                <assign to="param7">RESPONSE_AREA</assign>
+                <assign to="paramtype6">String</assign>
+                <assign to="param6">MIDSGFMT</assign>
+                <assign to="paramtype7">String</assign>
+                <assign to="paramtype5">String</assign>
+                <assign to="param5">MICHNREF</assign>
+                <assign to="paramDirection7">OUT</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="GPL/DSigFormat" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;MIDSGFMT&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/Channel" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;MIOPCHNL&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/EndDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/END_DUE)"></assign>
+                <assign to="YJSC16Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+                <assign to="GPL/DCGRef" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;MICHNREF&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/StartDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/START_DUE)"></assign>
+                <assign to="GPL/Status" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATUS_CODE/text()"></assign>
+                <assign to="GPL/CREF" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUST_AGMT_REF/text()"></assign>
+                <assign to="GPL/Compression" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;MICOMPFL&apos;][1]/SERVICE_DETAIL/text()"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+          <sequence name="IP-IR">
+            <operation name="JDBC: Query SA for IP-IR settings">
+              <participant name="FB_SA_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param1" from="string(GPL/CSID)"></assign>
+                <assign to="param2">GPL</assign>
+                <assign to="param3">IFOUTCHN</assign>
+                <assign to="param4">IFCOMFL</assign>
+                <assign to="param5">IFCHNREF</assign>
+                <assign to="param6">IFPDSGFT</assign>
+                <assign to="param7">RESPONSE_AREA</assign>
+                <assign to="paramtype1">Double</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="paramtype3">String</assign>
+                <assign to="paramtype4">String</assign>
+                <assign to="paramtype5">String</assign>
+                <assign to="paramtype6">String</assign>
+                <assign to="paramtype7">String</assign>
+                <assign to="query_type">PROCEDURE</assign>
+                <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;SASchema&apos;), &apos;.YJSC16_CUSTFILPREF(?,?,?,?,?,?,?)&apos;)"></assign>
+                <assign to="paramDirection7">OUT</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="GPL/Channel" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;IFOUTCHN&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/Compression" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;IFCOMFL&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/CREF" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUST_AGMT_REF/text()"></assign>
+                <assign to="GPL/DCGRef" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;IFCHNREF&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/DSigFormat" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;IFPDSGFT&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/EndDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/END_DUE)"></assign>
+                <assign to="GPL/StartDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/START_DUE)"></assign>
+                <assign to="GPL/Status" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATUS_CODE/text()"></assign>
+                <assign to="YJSC16Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+          <sequence name="AL">
+            <operation name="JDBC: Query SA for BAOExport(AL) settings">
+              <participant name="FB_SA_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param2">GPL</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="paramtype3">String</assign>
+                <assign to="param3">BAOPCHNL</assign>
+                <assign to="paramtype4">String</assign>
+                <assign to="param4">BACOMFL</assign>
+                <assign to="query_type">PROCEDURE</assign>
+                <assign to="param1" from="string(GPL/CSID)"></assign>
+                <assign to="paramtype1">Double</assign>
+                <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;SASchema&apos;), &apos;.YJSC16_CUSTFILPREF(?,?,?,?,?,?,?)&apos;)"></assign>
+                <assign to="param7">RESPONSE_AREA</assign>
+                <assign to="paramtype6">String</assign>
+                <assign to="param6">BADSGFMT</assign>
+                <assign to="paramtype7">String</assign>
+                <assign to="paramtype5">String</assign>
+                <assign to="param5">BACHLREF</assign>
+                <assign to="paramDirection7">OUT</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="GPL/DSigFormat" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;BADSGFMT&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/Channel" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;BAOPCHNL&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/EndDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/END_DUE)"></assign>
+                <assign to="YJSC16Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+                <assign to="GPL/DCGRef" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;BACHLREF&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/StartDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/START_DUE)"></assign>
+                <assign to="GPL/Status" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATUS_CODE/text()"></assign>
+                <assign to="GPL/CREF" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUST_AGMT_REF/text()"></assign>
+                <assign to="GPL/Compression" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;BACOMFL&apos;][1]/SERVICE_DETAIL/text()"></assign>
+              </input>
+            </operation>
+
+            <operation name="Assign: Set reformat params (replace LF with CRLF)">
+              <participant name="AssignService"/>
+              <output message="AssignServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="GPL/ReformatParams/keyword1" from="string(&apos;&#x0d;&apos;)"></assign>
+                <assign to="GPL/ReformatParams/replace1" from="string(&apos;&apos;)"></assign>
+                <assign to="GPL/ReformatParams/keyword2" from="string(&apos;&#x0a;&apos;)"></assign>
+                <assign to="GPL/ReformatParams/replace2" from="string(&apos;&#x0d;&#x0a;&apos;)"></assign>
+                <assign to="GPL/Reformat">true</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+          <sequence name="RO-RI">
+            <operation name="JDBC: Query SA for RO-RI settings">
+              <participant name="FB_SA_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param1" from="string(GPL/CSID)"></assign>
+                <assign to="param2">GPL</assign>
+                <assign to="param3">FPRROTCN</assign>
+                <assign to="param4">FPRCOMFL</assign>
+                <assign to="param5">FPRRCHRF</assign>
+                <assign to="param6">FPRDSGFT</assign>
+                <assign to="param7">RESPONSE_AREA</assign>
+                <assign to="paramtype1">Double</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="paramtype3">String</assign>
+                <assign to="paramtype4">String</assign>
+                <assign to="paramtype5">String</assign>
+                <assign to="paramtype6">String</assign>
+                <assign to="paramtype7">String</assign>
+                <assign to="query_type">PROCEDURE</assign>
+                <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;SASchema&apos;), &apos;.YJSC16_CUSTFILPREF(?,?,?,?,?,?,?)&apos;)"></assign>
+                <assign to="paramDirection7">OUT</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="GPL/Channel" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;FPRROTCN&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/Compression" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;FPRCOMFL&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/CREF" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUST_AGMT_REF/text()"></assign>
+                <assign to="GPL/DCGRef" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;FPRRCHRF&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/DSigFormat" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;FPRDSGFT&apos;][1]/SERVICE_DETAIL/text()"></assign>
+                <assign to="GPL/EndDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/END_DUE)"></assign>
+                <assign to="GPL/StartDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/START_DUE)"></assign>
+                <assign to="GPL/Status" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATUS_CODE/text()"></assign>
+                <assign to="YJSC16Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+        <sequence name="Verify Channel">
+          <assign name="Assign" to="GPL/Channel" from="sci-get-property(&apos;fbgpl&apos;, concat(&apos;SA.Channel.&apos;, GPL/Channel))"></assign>
+          <onFault>
+            <sequence name="Invalid Channel">
+              <operation name="Business Process Exception">
+                <participant name="FB_BPEXCEPTION"/>
+                <output message="BPExceptionServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="exceptionCode">Channel is invalid and unsupported in FileBroker</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </onFault>
+        </sequence>
+      </sequence>
+    </sequence>
+    <sequence name="SubFlow: Validate Customer and Reformat">
+      <sequence name="Validate">
+        <choice name="Valid?">
+          <select>
+            <case ref="InactiveCustomer" activity="Not Active"/>
+            <case ref="StartDateNotReached" activity="BeforeStartDate"/>
+            <case ref="EndDateReached" activity="AfterEndDate"/>
+          </select>
+
+          <sequence name="Not Active">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">Customer Agreement is not ACTIVE</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+          <sequence name="BeforeStartDate">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">Customer Agreement has not reached the Start Date</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+          <sequence name="AfterEndDate">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">Customer Agreement has passed the End Date</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+        <operation name="FB GPLFilename: create GPL filename">
+          <participant name="FB_GPLFilename"/>
+          <output message="FileBrokerGPLFilenameInputMessage">
+            <assign to="Format" from="string(GPL/Format)"></assign>
+            <assign to="Type" from="string(GPL/Type)"></assign>
+            <assign to="ProducerRef" from="string(GPL/ProducerRef)"></assign>
+            <assign to="RouterWFID" from="string(RouterWFID)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="GPL/GPLFilename" from="string(GPLFilename)"></assign>
+            <assign to="GPL/GPLBatchID" from="string(GPLBatchID)"></assign>
+          </input>
+        </operation>
+
+        <sequence name="Reformat">
+          <choice name="Requires Keyword Replace?">
+            <select>
+              <case ref="KeywordReplace" activity="Keyword Replace"/>
+            </select>
+
+            <sequence name="Keyword Replace">
+              <operation name="Keyword Replace: Reformat">
+                <participant name="FB_DOC_KEYWORD_REPLACE"/>
+                <output message="DocKeywordReplaceInputMessage">
+                  <assign to="literal_readAheadSize">8192</assign>
+                  <assign to="literal_bufferSize">102400</assign>
+                  <assign to="literal_mode">true</assign>
+                  <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                  <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                  <assign to="." from="GPL/ReformatParams/*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </choice>
+        </sequence>
+      </sequence>
+    </sequence>
+    <sequence name="SubFlow: Sign file">
+      <sequence name="Digital Signature">
+        <choice name="Signature Format?">
+          <select>
+            <case ref="SMIME" activity="SMIME"/>
+            <case ref="DSIG Not Set" activity="Not Set"/>
+          </select>
+
+          <sequence name="SMIME">
+            <operation name="JDBC: Query Bankline for Brand">
+              <participant name="FB_BL_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="param2">BRAND_CODE</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="param3">RESPONSE_AREA</assign>
+                <assign to="paramtype3">String</assign>
+                <assign to="query_type">PROCEDURE</assign>
+                <assign to="param1" from="string(GPL/CSID)"></assign>
+                <assign to="paramtype1">Double</assign>
+                <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbgpl&apos;, &apos;BLSchema&apos;), &apos;.YJSC11_GETCUSTBRND(?,?,?)&apos;)"></assign>
+                <assign to="paramDirection3">OUT</assign>
+                <assign to="paramDirection2">OUT</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="GPL/CertIndex" from="number(1)"></assign>
+                <assign to="GPL/Brand" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+                <assign to="YJSC16Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM2)"></assign>
+              </input>
+            </operation>
+
+            <sequence name="CertFailover">
+              <assign name="Assign" to="GPL/SignCert" from="sci-get-property(&apos;fbgpl&apos;, concat(&apos;SMIME.Sign.&apos;, GPL/Brand, &apos;.&apos;, GPL/CertIndex))"></assign>
+              <sequence name="Sign File">
+                <operation name="CMS: Sign the file">
+                  <participant name="FB_SMIME"/>
+                  <output message="CryptoMsgServiceInputMessage">
+                    <assign to="action">build</assign>
+                    <assign to="pipelineTimeout" from="sci-get-property(&apos;fbgpl&apos;, &apos;SMIME.Pipeline.Timeout&apos;)"></assign>
+                    <assign to="singleSignCert" from="string(GPL/SignCert)"></assign>
+                    <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                    <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                  </input>
+                </operation>
+
+                <onFault>
+                  <sequence name="SignError">
+                    <assign name="Assign" to="GPL/CertIndex" from="number(GPL/CertIndex)+1"></assign>
+                    <assign name="Assign" to="RouteOnErrorStatus">true</assign>
+                    <repeat name="CertFailover" ref="CertFailover"/>
+
+                  </sequence>
+                </onFault>
+              </sequence>
+              <onFault>
+                <sequence name="CertFindErr">
+                  <operation name="Business Process Exception">
+                    <participant name="FB_BPEXCEPTION"/>
+                    <output message="BPExceptionServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="exceptionCode">No signing certificates can be found</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </onFault>
+            </sequence>
+          </sequence>
+          <sequence name="Not Set">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">The Digital Signature format has not been defined</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+      </sequence>
+    </sequence>
+    <sequence name="SubFlow: Compress File">
+      <sequence name="Compression">
+        <choice name="Compression?">
+          <select>
+            <case ref="NoCompression" activity="None"/>
+            <case ref="GZIP" activity="GZIP"/>
+            <case ref="ZIP" activity="Zip"/>
+          </select>
+
+          <sequence name="None">
+            <assign name="Assign" to="GPL/Compression">N</assign>
+          </sequence>
+          <sequence name="GZIP">
+            <operation name="GZIP">
+              <participant name="FB_GZIP"/>
+              <output message="GZIPInputMessage">
+                <assign to="compressed_filename" from="concat(GPL/GPLFilename, &apos;.GZ&apos;)"></assign>
+                <assign to="compression_action">compress</assign>
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                <assign to="GPL/Compression" from="string(&apos;GZ&apos;)"></assign>
+              </input>
+            </operation>
+
+            <assign name="Assign" to="GPL/GPLFilename" from="concat(GPL/GPLFilename, &apos;.GZ&apos;)"></assign>
+          </sequence>
+          <sequence name="Zip">
+            <operation name="Get Doc  Info: Rename doc">
+              <participant name="FB_GETDOCINFO"/>
+              <output message="GetDocumentInfoServiceTypeInputMessage">
+                <assign to="BodyName" from="concat(GPL/GPLFilename, GPL/GPLBatchID)"></assign>
+                <assign to="DocumentName" from="concat(GPL/GPLFilename, GPL/GPLBatchID)"></assign>
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                <assign to="updateMetaDataOnly">true</assign>
+              </output>
+              <input message="inmsg">
+              </input>
+            </operation>
+
+            <assign name="Assign" to="GPL/GPLFilename" from="concat(GPL/GPLFilename, &apos;.ZIP&apos;)"></assign>
+            <operation name="Compression Service">
+              <participant name="FB_ZIP"/>
+              <output message="compressionInputMessage">
+                <assign to="compression_type">Deflate</assign>
+                <assign to="compression_action">Compress</assign>
+                <assign to="compression_level">9</assign>
+                <assign to="compressed_filename" from="string(GPL/GPLFilename)"></assign>
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                <assign to="GPL/Compression" from="string(&apos;ZIP&apos;)"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+      </sequence>
+    </sequence>
+    <sequence name="SubFlow: Register file">
+      <sequence name="Register">
+        <assign name="Assign" to="GPL/GPLFilename" from="concat(GPL/GPLFilename, GPL/GPLBatchID)"></assign>
+        <assign name="Assign" to="GPL/RFilename" from="concat(GPL/DCGRef, &apos;.&apos;, GPL/Format, &apos;.&apos;, GPL/Type, &apos;.&apos;, GPL/Compression)"></assign>
+        <assign name="Assign" to="GPL/CFilename" from="concat(GPL/RFilename, &apos;_&apos;, GPL/GPLFilename, &apos;@&apos;, GPL/Channel)"></assign>
+        <operation name="FileBrokerFile: Register file">
+          <participant name="FB_FILEBROKER_FILE"/>
+          <output message="FileBrokerFileInputMessage">
+            <assign to="Direction">Outbound</assign>
+            <assign to="DataFlowID" from="string(RouteDataflowId)"></assign>
+            <assign to="CustomerFilename" from="string(GPL/GPLFilename)"></assign>
+            <assign to="Channel" from="string(GPL/Channel)"></assign>
+            <assign to="SubmitterID" from="string(GPL/CSID)"></assign>
+            <assign to="DuplicateDays">0</assign>
+            <assign to="ChannelRef" from="string(GPL/DCGRef)"></assign>
+            <assign to="DuplicateCheck">FALSE</assign>
+            <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <operation name="Get Doc Info: Rename document">
+          <participant name="FB_GETDOCINFO"/>
+          <output message="GetDocumentInfoServiceTypeInputMessage">
+            <assign to="DocumentName" from="string(GPL/CFilename)"></assign>
+            <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+            <assign to="updateMetaDataOnly">true</assign>
+            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+      </sequence>
+    </sequence>
+    <onFault>
+      <sequence name="FB_8070">
+        <assign name="Assign" to="RouteOnErrorStatus">false</assign>
+        <operation name="FB Route Event: FB_8070">
+          <participant name="FileGatewayRouteEventService"/>
+          <output message="FileGatewayRouteEventServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FB_8070</assign>
+            <assign to="ExceptionLevel">Abnormal</assign>
+            <assign to="EventAttributes/Filename" from="string(GPL/IFilename)" append="true"></assign>
+            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Mailbox Add: Add to Route DeadLetter">
+          <participant name="FB_MAILBOXADD"/>
+          <output message="MailboxAddServiceTypeInputMessage">
+            <assign to="Extractable">YES</assign>
+            <assign to="MessageName" from="string(IFilename)"></assign>
+            <assign to="MailboxPath" from="sci-get-property(&apos;fbgpl&apos;, &apos;Route.DeadLetter&apos;)"></assign>
+            <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

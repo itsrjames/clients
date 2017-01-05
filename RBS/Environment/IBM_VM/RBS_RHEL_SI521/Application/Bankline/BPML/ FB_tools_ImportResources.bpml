@@ -1,0 +1,15 @@
+<process name="FB_tools_ImportResources">
+<sequence>
+<operation>
+<participant name="ImportService"/>
+<output message="Xout">
+<assign to="Context">FBSystem</assign>
+<assign to="Identity">Upgrade</assign>
+<assign to="." from="*"></assign>
+</output>
+<input message="Xin">
+<assign to="." from="*"></assign>
+</input>
+</operation>
+</sequence>
+</process>

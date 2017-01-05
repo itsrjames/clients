@@ -1,0 +1,9 @@
+<AFTExtensions>
+	<AFTExtension name="va_uc001-protocol" type="consumer-delivery-protocol" label="va_uc001.protocol.label.fsdprotocol" bp="VA_UC001">
+		<GROUP title="va_uc001.instance.group1.title">
+			<VARDEF varname="UNCDirectory" type="String" htmlType="text" validator="ALPHANUMERIC" size="30" maxsize="255" label="va_uc001.label.customuncwrite.uncdirectory" required="yes"/>
+		</GROUP>
+	</AFTExtension>	
+	<AFTExtension name="FileBroker_CDWTO_Delivery" type="consumer-delivery-protocol" label="fbcdwto.protocol.label.fbcdwto" bp="FB_CDWTO_Delivery"></AFTExtension>	
+	<AFTExtension name="FileBroker_AsyncCD_Delivery" type="consumer-delivery-protocol" label="fbacd.protocol.label.fbacd" bp="FB_Async_CD_Delivery"></AFTExtension>
+</AFTExtensions>

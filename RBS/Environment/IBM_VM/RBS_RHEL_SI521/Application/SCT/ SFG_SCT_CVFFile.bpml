@@ -1,0 +1,485 @@
+<process name="SFG_SCT_CVFFile">
+  <rule name="BPRestarted">
+    <condition>string-length(RESTART_FROM)&gt;0</condition>
+  </rule>
+
+  <rule name="DoDebundle">
+    <condition>string(SFG_SCT_CVFFile/FileRjctRsn)=SFG_SCT_CVFFile/*[starts-with(local-name(), &apos;Token&apos;)]/text()</condition>
+  </rule>
+
+  <rule name="DoMarkAsError">
+    <condition>string(SFG_SCT_CVFFile/FileRjctRsn)!=SFG_SCT_CVFFile/*[starts-with(local-name(), &apos;Token&apos;)]/text()
+and
+string(SFG_SCT_CVFFile/FileRjctRsn)!=&apos;A00&apos;</condition>
+  </rule>
+
+  <rule name="MarkAsCompleted">
+    <condition>string(SFG_SCT_CVFFile/MarkAsCompleted)=string(SFG_ThrowError/ErrorCode[1])</condition>
+  </rule>
+
+  <rule name="IsCAMTRelated">
+    <condition>count(DocToDOM(SFG_SCT_CVFFile/Filesource)//*[local-name()=&apos;OrgnlMsgNmId&apos; and starts-with(., &apos;camt&apos;)])&gt;0</condition>
+  </rule>
+  
+<!--  
+ Changed by Joe Oliveira
+ Date 21 Oct 2013 
+ Use to check if the file is SGT. If so then further down the payment_bic is updated to Ulster 
+ --> 
+  <rule name="IsSGT">
+    <condition>substring(translate(/ProcessData/SFG_SCT_CVFFile/SGTFileRef/text(),'isgt','ISGT'),1,4) = 'ISGT'</condition>
+  </rule>
+
+  
+
+  <sequence name="MAIN_SEQ">
+    <sequence name="CVF File">
+      <sequence name="SubFlowA: Terminate restarted">
+        <sequence name="CheckRestart">
+          <operation name="BPControl">
+            <participant name="FB_BPCONTROL"/>
+            <output message="BPControlInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="Action">Terminate</assign>
+              <assign to="HaltOnError">False</assign>
+              <assign to="WFID" from="string(RESTART_FROM)"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <choice name="BPisRestarted?">
+            <select>
+              <case ref="BPRestarted" activity="Rollback payments"/>
+            </select>
+
+            <sequence name="Rollback payments">
+              <operation name="LWJDBC: Mark payments as error status (-1)">
+                <participant name="FB_LWJDBC"/>
+                <output message="LightweightJDBCAdapterTypeInputMessage">
+                  <assign to="param1" from="-1"></assign>
+                  <assign to="param2" from="number(SFG_SCT_CVFFile/BundleID)"></assign>
+                  <assign to="paramtype1">Integer</assign>
+                  <assign to="paramtype2">Integer</assign>
+                  <assign to="query_type">UPDATE</assign>
+                  <assign to="result_name">result</assign>
+                  <assign to="row_name">row</assign>
+                  <assign to="sql">UPDATE SCT_PAYMENT SET STATUS=? WHERE BUNDLE_ID=? AND STATUS=1</assign>
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                </input>
+              </operation>
+
+              <onFault>
+                <sequence name="SCT47">
+                  <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT47</assign>
+                  <operation name="Inline Invoke : Throw Error">
+                    <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+                    <output message="InlineInvokeBPTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </onFault>
+            </sequence>
+          </choice>
+        </sequence>
+      </sequence>
+      <sequence name="SubFlowB :Read Rejection Reason">
+        <sequence name="FileRjctRsn">
+          <operation name="BP Metadata: Get WFID">
+            <participant name="FB_BPMETADATA"/>
+            <output message="BPMetaDataServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="SFG_SCT_CVFFile/WFID" from="string(BPDATA/WORKFLOW_ID)"></assign>
+            </input>
+          </operation>
+
+          <operation name="LWJDBC: Update WFID, Status(3)">
+            <participant name="FB_LWJDBC"/>
+            <output message="LightweightJDBCAdapterTypeInputMessage">
+              <assign to="param1" from="3"></assign>
+              <assign to="param2" from="string(SFG_SCT_CVFFile/WFID)"></assign>
+              <assign to="param3" from="number(SFG_SCT_CVFFile/BundleID)"></assign>
+              <assign to="paramtype1">Integer</assign>
+              <assign to="paramtype2">Integer</assign>
+              <assign to="paramtype3">Integer</assign>
+              <assign to="query_type">UPDATE</assign>
+              <assign to="sql">UPDATE SCT_BUNDLE SET STATUS=?, WF_ID=? WHERE BUNDLE_ID=?</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+            </input>
+          </operation>
+
+          <assign name="Assign" to="SFG_SCT_CVFFile/FileRjctRsn" from="string(DocToDOM(SFG_SCT_CVFFile/Filesource, &apos;false&apos;)/*[local-name()=&apos;FileRjctRsn&apos;])"></assign>
+          <assign name="Assign" to="SFG_SCT_CVFFile/ICFReference" from="string(DocToDOM(SFG_SCT_CVFFile/Filesource, &apos;false&apos;)/*[local-name()=&apos;OrigFRef&apos;])"></assign>
+          <operation name="LWJDBC: Update Reason as ERROR CODE">
+            <participant name="FB_LWJDBC"/>
+            <output message="LightweightJDBCAdapterTypeInputMessage">
+              <assign to="param1" from="concat(&apos;SCT_&apos;, string(SFG_SCT_CVFFile/FileRjctRsn))"></assign>
+              <assign to="param2" from="number(SFG_SCT_CVFFile/BundleID)"></assign>
+              <assign to="paramtype1">String</assign>
+              <assign to="paramtype2">Integer</assign>
+              <assign to="query_type">UPDATE</assign>
+              <assign to="sql">UPDATE SCT_BUNDLE SET ERROR=?  WHERE BUNDLE_ID=?</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+            </input>
+          </operation>
+
+          <onFault>
+            <sequence name="SCT39">
+              <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT39</assign>
+              <operation name="Inline Invoke : Throw Error">
+                <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+                <output message="InlineInvokeBPTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </onFault>
+        </sequence>
+      </sequence>
+      <sequence name="SubFlowC: Debundle File">
+        <sequence name="ProcessCVF">
+          <assign name="Assign" to="SFG_SCT_CVFFile/BatchID" from="getUniqueID()"></assign>
+          <sequence name="CAMT related">
+            <choice name="Are CAMT related?">
+              <select>
+                <case ref="IsCAMTRelated" activity="Debulk CAMT related"/>
+              </select>
+
+              <sequence name="Debulk CAMT related">
+                <operation name="Assign">
+                  <participant name="AssignService"/>
+                  <output message="AssignServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="SFG_SCT_Debundle" from="//*[local-name()=&apos;Filesource&apos; or local-name()=&apos;ENTITY&apos; or local-name()=&apos;WFID&apos; or local-name()=&apos;BundleID&apos; or local-name()=&apos;BatchID&apos;]"></assign>
+                    <assign to="SFG_SCT_Debundle/TrxCount">9999999999</assign>
+                    <assign to="SFG_SCT_Debundle/TrxEnd">9999999999</assign>
+                    <assign to="SFG_SCT_Debundle/TrxStart" append="true">1</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+                <operation name="Assign">
+                  <participant name="AssignService"/>
+                  <output message="AssignServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="SFG_SCT_Debundle/XMLRootTag" from="sci-get-property(&apos;sct&apos;, &apos;sct.localname.camt029&apos;)"></assign>
+                    <assign to="SFG_SCT_Debundle/FormatTemplate">SFG_SCT_CVF_Format</assign>
+                    <assign to="SFG_SCT_Debundle/PACSType">CAMT</assign>
+                    <assign to="SFG_SCT_Debundle/InlineInvoke">true</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+                <operation name="Invoke SFG_SCT_Debundle">
+                  <participant name="FB_INVOKE_SUBPROCESS"/>
+                  <output message="InvokeSubProcessServiceTypeInputMessage">
+                    <assign to="INVOKE_MODE">INLINE</assign>
+                    <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+                    <assign to="WFD_NAME">SFG_SCT_Debundle</assign>
+                    <assign to="." from="*"></assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+                <operation name="Release SFG_SCT_Debundle">
+                  <participant name="FB_RELEASE"/>
+                  <output message="ReleaseServiceTypeInputMessage">
+                    <assign to="TARGET">SFG_SCT_Debundle</assign>
+                    <assign to="." from="*"></assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+              </sequence>
+            </choice>
+          </sequence>
+          <operation name="Tokenize:List of Debundle errors">
+            <participant name="FB_TOKENIZE"/>
+            <output message="TokenizeInputMessage">
+              <assign to="StringInput" from="sci-get-property(&apos;sct&apos;, &apos;sct.cvf.debundle.errors&apos;)"></assign>
+              <assign to="Token">;</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="SFG_SCT_CVFFile" from="*"></assign>
+            </input>
+          </operation>
+
+          <choice name="Requires Debundling?">
+            <select>
+              <case ref="DoDebundle" activity="Debundle"/>
+              <case ref="DoMarkAsError" activity="Throw Reject Rsn Error"/>
+            </select>
+
+            <sequence name="Debundle">
+              <operation name="Assign">
+                <participant name="AssignService"/>
+                <output message="AssignServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="SFG_SCT_Debundle" from="//*[local-name()=&apos;Filesource&apos; or local-name()=&apos;ENTITY&apos; or local-name()=&apos;WFID&apos; or local-name()=&apos;BundleID&apos; or local-name()=&apos;BatchID&apos;]"></assign>
+                  <assign to="SFG_SCT_Debundle/TrxCount">9999999999</assign>
+                  <assign to="SFG_SCT_Debundle/TrxEnd">9999999999</assign>
+                  <assign to="SFG_SCT_Debundle/TrxStart" append="true">1</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+              <operation name="Assign">
+                <participant name="AssignService"/>
+                <output message="AssignServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="SFG_SCT_Debundle/XMLRootTag" from="sci-get-property(&apos;sct&apos;, &apos;sct.localname.cvf&apos;)"></assign>
+                  <assign to="SFG_SCT_Debundle/FormatTemplate">SFG_SCT_CVF_Format</assign>
+                  <assign to="SFG_SCT_Debundle/PACSType">PACS</assign>
+                  <assign to="SFG_SCT_Debundle/InlineInvoke">true</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+              <operation name="Invoke SFG_SCT_Debundle">
+                <participant name="FB_INVOKE_SUBPROCESS"/>
+                <output message="InvokeSubProcessServiceTypeInputMessage">
+                  <assign to="INVOKE_MODE">INLINE</assign>
+                  <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+                  <assign to="WFD_NAME">SFG_SCT_Debundle</assign>
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+              <operation name="Release SFG_SCT_Debundle">
+                <participant name="FB_RELEASE"/>
+                <output message="ReleaseServiceTypeInputMessage">
+                  <assign to="TARGET">SFG_SCT_Debundle</assign>
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+            <sequence name="Throw Reject Rsn Error">
+              <assign name="Assign" to="SFG_SCT_CVFFile/MarkAsCompleted" from="concat(&apos;SCT_&apos;, string(SFG_SCT_CVFFile/FileRjctRsn))"></assign>
+              <assign name="Assign" to="SFG_ThrowError/ErrorCode" from="concat(&apos;SCT_&apos;, string(SFG_SCT_CVFFile/FileRjctRsn))" append="true"></assign>
+              <operation name="Inline Invoke : Throw Error">
+                <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+                <output message="InlineInvokeBPTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </choice>
+          <operation name="LWJDBC: Update Status(5)">
+            <participant name="FB_LWJDBC"/>
+            <output message="LightweightJDBCAdapterTypeInputMessage">
+              <assign to="param1" from="5"></assign>
+              <assign to="param2" from="number(SFG_SCT_CVFFile/BundleID)"></assign>
+              <assign to="paramtype1">Integer</assign>
+              <assign to="paramtype2">Integer</assign>
+              <assign to="query_type">UPDATE</assign>
+              <assign to="sql">UPDATE SCT_BUNDLE SET STATUS=? WHERE BUNDLE_ID=?</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+            </input>
+          </operation>
+          <!-- Here pacs.002 post processing invoke -->
+          <operation name="Invoke SCT MQ Inbound">
+            <participant name="FB_INVOKE_SUBPROCESS"/>
+            <output message="InvokeSubProcessServiceTypeInputMessage">
+              <assign to="INVOKE_MODE">INLINE</assign>
+              <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+              <assign to="WFD_NAME">SFG_SCT_CVF_PCF_PACS002_PostProcess</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>          
+          <!-- SEPA_CTREP_005 -->
+		  <assign to="PrimaryDocument" from="SFG_SCT_CVFFile/Filesource/@SCIObjectID"></assign>	
+          <operation name="Invoke SFG_SCT_CVFFile_Update_OrigTxType">
+            <participant name="FB_INVOKE_SUBPROCESS"/>
+            <output message="InvokeSubProcessServiceTypeInputMessage">
+              <assign to="INVOKE_MODE">INLINE</assign>
+              <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+              <assign to="WFD_NAME">SFG_SCT_CVFFile_Update_OrigTxType</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+          
+          <!-- 
+Changed by Joe Oliveira
+Date 21 Oct 2013
+If the Bundle is a sgt bundle then update all payment bics to be Ulster Bank. The BIC is retrieved from 
+sct.properties sgt.payment.bic
+ -->
+		  <choice name="setSGTFlag">
+		  	<select>
+		  		<case ref="IsSGT" activity="updatePaymentBicForSGT"/>
+		  	</select>
+		  	<sequence name="updatePaymentBicForSGT">
+		  	
+ 					<operation name="LWJDBC: Update Payment BIC for SGT">
+					  <participant name="FB_LWJDBC"/>
+					  <output message="LightweightJDBCAdapterTypeInputMessage">
+                    	<assign to="param1" from="sci-get-property(&apos;sct&apos;, &apos;sgt.paymentBic&apos;)"></assign>
+						<assign to="param2" from="number(/ProcessData/SFG_SCT_CVFFile/BundleID)"></assign>
+						<assign to="paramtype1">String</assign>
+						<assign to="paramtype2">Integer</assign>
+						<assign to="query_type">UPDATE</assign>
+						<assign to="sql">UPDATE SCT_PAYMENT SET PAYMENT_BIC=? where BUNDLE_ID=?</assign>
+						<assign to="." from="*"></assign>
+					  </output>
+					  <input message="inmsg">
+					  </input>
+					</operation>
+		  	</sequence>
+		  </choice>
+ 
+ <!--  END OF CHANGE 2013 Oct 21 -->
+           			
+                  <!-- Populate Cycle Number for Reporting -->
+                  <assign to="SFG_SCT_CVFFile/Cycle" from="string(DocToDOM(SFG_SCT_CVFFile/Filesource)//*[local-name()='FileCycleNo'])"></assign>   
+          <assign name="Assign" to="message_to_child/SFG_SCT_MQInbound" from="//*[local-name()=&apos;BundleID&apos; or local-name()=&apos;Cycle&apos; or local-name()=&apos;ENTITY&apos; or local-name()=&apos;WFID&apos; or local-name()=&apos;ENTITY_ID&apos; or local-name()=&apos;BatchID&apos;]"></assign>
+          
+          
+          
+          <operation name="Invoke SCT MQ Inbound">
+            <participant name="FB_INVOKE_SUBPROCESS"/>
+            <output message="InvokeSubProcessServiceTypeInputMessage">
+              <assign to="INVOKE_MODE">ASYNC</assign>
+              <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+              <assign to="WFD_NAME">SFG_SCT_MQInbound</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+                    
+
+          <onFault>
+            <sequence name="SCT40">
+              <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT40</assign>
+              <operation name="Inline Invoke : Throw Error">
+                <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+                <output message="InlineInvokeBPTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </onFault>
+        </sequence>
+      </sequence>
+      <onFault>
+        <sequence name="SCT38">
+          <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT38</assign>
+          <operation name="Inline Invoke : Throw Error">
+            <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+            <output message="InlineInvokeBPTypeInputMessage">
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <onFault>
+      <sequence name="HandleError">
+        <operation name="LWJDBC: Update Bundle as error">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1" from="string(SFG_ThrowError/ErrorCode[1])"></assign>
+            <assign to="param2" from="number(SFG_SCT_CVFFile/BundleID)"></assign>
+            <assign to="paramtype1">String</assign>
+            <assign to="paramtype2">Integer</assign>
+            <assign to="query_type">UPDATE</assign>
+            <assign to="sql">UPDATE SCT_BUNDLE SET STATUS=-STATUS, ERROR=? WHERE BUNDLE_ID=? AND STATUS &gt;=0</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <choice name="SetBPHalted?">
+          <select>
+            <case ref="MarkAsCompleted" negative="true" activity="HaltBP"/>
+          </select>
+
+          <sequence name="HaltBP">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="exceptionCode">Marking process as halted</assign>
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+        <operation name="Release Service">
+          <participant name="FB_RELEASE"/>
+          <output message="ReleaseServiceTypeInputMessage">
+            <assign to="TARGET">SFG_SCT_CVFFile</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

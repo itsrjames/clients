@@ -1,0 +1,93 @@
+<process name="FB_tools_SWIFTNet7CreateOutputChannels"> 
+  <rule name="ChannelNodesLeft"> 
+    <condition>number(Counter)&lt;=count(/ProcessData/CreateOutputChannels/OutputChannels/OutputChannel)</condition> 
+  </rule> 
+
+  <sequence name="Main"> 
+    <operation name="XML Encoder"> 
+      <participant name="XMLEncoder"/> 
+      <output message="XMLEncoderTypeInputMessage"> 
+        <assign to="." from="*"></assign> 
+        <assign to="mode">xml_to_process_data</assign> 
+        <assign to="output_to_process_data">YES</assign> 
+        <assign to="validate_xml">NO</assign> 
+      </output> 
+      <input message="inmsg"> 
+        <assign to="." from="*"></assign> 
+      </input> 
+    </operation> 
+
+    <operation name="ClusterUtils: Get SNS Adapter instance"> 
+      <participant name="FB_CLUSTERUTILS"/> 
+      <output message="ClusterUtilsInputMessage"> 
+        <assign to="." from="*"></assign> 
+        <assign to="Action">GetAdapterForActiveNode</assign> 
+        <assign to="ServiceName">FB_SWIFTNET7_SERVER_SG</assign> 
+      </output> 
+      <input message="inmsg"> 
+        <assign to="HttpClientAdapter" from="concat(&apos;FB_SWIFT7_HTTP_CLIENT_&apos;, substring-before(substring-after(//servicename, &apos;FB_SWIFTNET7_SERVER_&apos;), &apos;_&apos;))"></assign>
+
+        <assign to="serverAdapterName" from="substring-before(substring-after(//servicename, &apos;[CDATA[&apos;), &apos;]]&apos;)"></assign>
+
+      </input> 
+    </operation> 
+
+    <assign to="Counter">1</assign> 
+    <sequence name="LoopStart"> 
+      <choice name="NodesLeft?"> 
+        <select> 
+          <case ref="ChannelNodesLeft" activity="CreateChannel"/> 
+        </select> 
+
+        <sequence name="CreateChannel"> 
+          <assign to="outputChannelName" from="string(/ProcessData/CreateOutputChannels/OutputChannels/OutputChannel[number(/ProcessData/Counter)]/ChannelName)"></assign>
+
+          <assign name="Assign" to="authoriserDN" from="string(/ProcessData/CreateOutputChannels/OutputChannels/OutputChannel[number(/ProcessData/Counter)]/AuthoriserDN)"></assign>
+
+          <operation name="Send CreateOutputChannelSnFRequest"> 
+      <participant name="SWIFTNet7ClientService"/> 
+      <output message="createOutputChannelRequest"> 
+        <assign to="." from="*"/> 
+        <assign to="outputChannelName" from="string(/ProcessData/CreateOutputChannels/OutputChannels/OutputChannel[number(/ProcessData/Counter)]/ChannelName)"></assign>
+
+        <assign to="authoriserDN" from="string(/ProcessData/CreateOutputChannels/OutputChannels/OutputChannel[number(/ProcessData/Counter)]/AuthoriserDN)"></assign>
+
+      </output> 
+      <input message="createOutputChannelResponse"> 
+        <assign to="." from="*"/> 
+      </input> 
+    </operation> 
+    <operation name="Receive CreateOutputChannelSnFResponse"> 
+      <participant name="SWIFTNet7ClientService"/> 
+      <output message="handleOutputChannelResponse"> 
+        <assign to="." from="*"/> 
+      </output> 
+      <input message="outputChannelOut"> 
+        <assign to="." from="*"/> 
+      </input> 
+    </operation> 
+
+ <operation name="Release Service"> 
+            <participant name="FB_RELEASE"/> 
+            <output message="ReleaseServiceTypeInputMessage"> 
+              <assign to="." from="*"></assign> 
+              <assign to="TARGET">/ProcessData/*[local-name()!='CreateOutputChannels' and local-name()!='HttpClientAdapter'and local-name()!='serverAdapterName' and local-name()!='Counter']</assign>
+
+            </output> 
+            <input message="inmsg"> 
+              <assign to="." from="*"></assign> 
+            </input> 
+          </operation> 
+
+
+
+
+
+          <assign to="Counter" from="number(Counter)+1"></assign> 
+          <repeat name="Return to LoopStart" ref="LoopStart"/> 
+
+        </sequence> 
+      </choice> 
+    </sequence> 
+  </sequence> 
+</process> 

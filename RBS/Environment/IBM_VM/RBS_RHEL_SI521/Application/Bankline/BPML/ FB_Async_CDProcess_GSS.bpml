@@ -1,0 +1,294 @@
+<process name="FB_Async_CDProcess_GSS">
+  <rule name="CDFilesLeft">
+    <condition>number(FB_Async_CD/CDFileCount)&gt;=number(FB_Async_CD/CDLoopCounter)</condition>
+  </rule>
+
+  <rule name="MaxFailures">
+    <condition>number(FB_Async_CD/CDFailures)&gt;=sci-get-property(&apos;fbasynccd&apos;,&apos;batchfailures.max&apos;) </condition>
+  </rule>
+
+  <rule name="CompleteState">
+    <condition>string(FB_Async_CD/State)!=&apos;Complete&apos; and number(StateCheckCount)&lt;=5</condition>
+  </rule>
+
+  <rule name="CompleteStateRetriesExhausted">
+    <condition>string(FB_Async_CD/State)!=&apos;Complete&apos; and number(StateCheckCount)&gt;5</condition>
+  </rule>
+
+  <sequence name="GSS CD Process">
+    <operation name="XML Encoder">
+      <participant name="FB_XMLENCODER"/>
+      <output message="XMLEncoderTypeInputMessage">
+        <assign to="mode">xml_to_process_data</assign>
+        <assign to="output_to_process_data">YES</assign>
+        <assign to="PrimaryDocument" from="FB_Async_CD/FileList/@SCIObjectID"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="FB_Async_CD/Files" from="Files/*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Assign: init">
+      <participant name="AssignService"/>
+      <output message="AssignServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="FB_Async_CD/CDFailures">0</assign>
+        <assign to="FB_Async_CD/CDFileCount" from="count(FB_Async_CD/Files/File)"></assign>
+        <assign to="FB_Async_CD/CDLoopCounter">1</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <sequence name="CDLoopStart">
+      <choice name="CDFilesLeft?">
+        <select>
+          <case ref="CDFilesLeft" activity="CD Copy File"/>
+        </select>
+
+        <sequence name="CD Copy File">
+          <sequence name="Transaction">
+            <operation name="Assign: Set GSS filenames">
+              <participant name="AssignService"/>
+              <output message="AssignServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="FB_Async_CD/GSSFilename" from="substring-after(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/FILENAME, &apos;_&apos;)"></assign>
+                <assign to="FB_Async_CD/GSSRef" from="substring-before(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/FILENAME, &apos;.&apos;)"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="CD Copy File">
+              <participant name="FB_CD_COPYTO"/>
+              <output message="CDServerCopyToServiceTypeInputMessage">
+                <assign to="BinaryMode">Yes</assign>
+                <assign to="CDDisposition">New</assign>
+                <assign to="Compression">9</assign>
+                <assign to="LocalDocumentId" from="string(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/DOCUMENT_ID)"></assign>
+                <assign to="RemoteFileName" from="concat(FB_Async_CD/UploadDir, FB_Async_CD/GSSRef, FB_Async_CD/SubDir1, FB_Async_CD/GSSFilename)"></assign>
+                <assign to="SessionToken" from="FB_Async_CD/SessionToken/*"></assign>
+                <assign to="Sysopts">datatype(binary) strip.blanks(no) xlate(no)</assign>
+                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              </output>
+              <input message="inmsg">
+              </input>
+            </operation>
+
+            <operation name="JDBC: Set record status (2)">
+              <participant name="FB_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param1">2</assign>
+                <assign to="param2" from="number(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/ASYNC_CD_ID)"></assign>
+                <assign to="param3">0</assign>
+                <assign to="paramtype1">Integer</assign>
+                <assign to="paramtype2">Integer</assign>
+                <assign to="paramtype3">Integer</assign>
+                <assign to="query_type">UPDATE</assign>
+                <assign to="sql">UPDATE FB_ASYNC_CD SET STATUS=?, LAST_MODIFIED=sysdate WHERE ASYNC_CD_ID=? AND ARCHIVED=?</assign>
+              </output>
+              <input message="inmsg">
+              </input>
+            </operation>
+
+            <operation name="FGRouteEvent: FB_8009">
+              <participant name="FileGatewayRouteEventService"/>
+              <output message="FileGatewayRouteEventServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="RouteEntityKey" from="string(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/DELIVERY_KEY)"></assign>
+                <assign to="RouteEntityType">DELIVERY</assign>
+                <assign to="RouteMetadata">NotKnown</assign>
+                <assign to="RouteDataflowId" from="string(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/DATAFLOW_ID)"></assign>
+                <assign to="ExceptionLevel">Normal</assign>
+                <assign to="EventCode">FB_8009</assign>
+                <assign to="EventAttributes/Filename" from="string(FB_Async_CD/GSSFilename)" append="true"></assign>
+                <assign to="EventAttributes/WFID" from="string(FB_Async_CD/WFID)" append="true"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="JDBC:Update Arrived File as Routed">
+              <participant name="FB_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param1">Routed</assign>
+                <assign to="param2" from="string(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/DELIVERY_KEY)"></assign>
+                <assign to="paramtype1">String</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="query_type">UPDATE</assign>
+                <assign to="sql">UPDATE FG_ARRIVEDFILE SET STATE=? WHERE ARRIVEDFILE_KEY IN  ( SELECT r.ARRIVEDFILE_KEY FROM FG_DELIVERY d, FG_ROUTE r WHERE d.ROUTE_KEY = r.ROUTE_KEY  AND d.DELIVERY_KEY=? )</assign>
+              </output>
+              <input message="inmsg">
+              </input>
+            </operation>
+
+            <onFault>
+              <sequence name="Copy Error">
+                <operation name="JDBC: Set record status (-1)">
+                  <participant name="FB_LWJDBC"/>
+                  <output message="LightweightJDBCAdapterTypeInputMessage">
+                    <assign to="param1">-1</assign>
+                    <assign to="param2" from="number(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/ASYNC_CD_ID)"></assign>
+                    <assign to="param3">0</assign>
+                    <assign to="paramtype1">Integer</assign>
+                    <assign to="paramtype2">Integer</assign>
+                    <assign to="paramtype3">Integer</assign>
+                    <assign to="query_type">UPDATE</assign>
+                    <assign to="sql">UPDATE FB_ASYNC_CD SET STATUS=?, LAST_MODIFIED=sysdate WHERE ASYNC_CD_ID=? AND ARCHIVED=?</assign>
+                  </output>
+                  <input message="inmsg">
+                  </input>
+                </operation>
+
+                <assign name="Assign" to="StateCheckCount">1</assign>
+                <sequence name="UpdateAsFailed">
+                  <operation name="FGRouteEvent: FB_8059">
+                    <participant name="FileGatewayRouteEventService"/>
+                    <output message="FileGatewayRouteEventServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="RouteEntityKey" from="string(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/DELIVERY_KEY)"></assign>
+                      <assign to="RouteEntityType">DELIVERY</assign>
+                      <assign to="RouteMetadata">NotKnown</assign>
+                      <assign to="RouteDataflowId" from="string(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/DATAFLOW_ID)"></assign>
+                      <assign to="ExceptionLevel">Abnormal</assign>
+                      <assign to="EventCode">FB_8059</assign>
+                      <assign to="EventAttributes/Filename" from="string(FB_Async_CD/GSSFilename)" append="true"></assign>
+                      <assign to="EventAttributes/WFID" from="string(FB_Async_CD/WFID)" append="true"></assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                  <operation name="JDBC: Get Consumer Msg ID">
+                    <participant name="FB_LWJDBC"/>
+                    <output message="LightweightJDBCAdapterTypeInputMessage">
+                      <assign to="param1" from="string(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/DELIVERY_KEY)"></assign>
+                      <assign to="paramtype1">String</assign>
+                      <assign to="sql">SELECT CONSUMER_MSGID, STATE FROM FG_DELIVERY WHERE DELIVERY_KEY=?</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="FB_Async_CD/ConsumerMsgID" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CONSUMER_MSGID/text()"></assign>
+                      <assign to="FB_Async_CD/State" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATE/text()"></assign>
+                    </input>
+                  </operation>
+
+                  <choice name="IsStateComplete?">
+                    <select>
+                      <case ref="CompleteState" activity="NotComplete"/>
+                      <case ref="CompleteStateRetriesExhausted" activity="RetriesExhausted"/>
+                    </select>
+
+                    <sequence name="NotComplete">
+                      <operation name="Wait">
+                        <participant name="WaitService"/>
+                        <output message="WaitServiceTypeInputMessage">
+                          <assign to="." from="*"></assign>
+                          <assign to="WAIT_INTERVAL">1</assign>
+                        </output>
+                        <input message="inmsg">
+                          <assign to="." from="*"></assign>
+                        </input>
+                      </operation>
+
+                      <assign name="Assign" to="StateCheckCount" from="number(StateCheckCount)+1"></assign>
+                      <repeat name="Return to UpdateAsFailed" ref="UpdateAsFailed"/>
+
+                    </sequence>
+                    <sequence name="RetriesExhausted">
+                      <operation name="Business Process Exception">
+                        <participant name="FB_BPEXCEPTION"/>
+                        <output message="BPExceptionServiceTypeInputMessage">
+                          <assign to="." from="*"></assign>
+                          <assign to="exceptionCode">Error setting a file as failed.</assign>
+                        </output>
+                        <input message="inmsg">
+                          <assign to="." from="*"></assign>
+                        </input>
+                      </operation>
+
+                    </sequence>
+                  </choice>
+                </sequence>
+                <operation name="FileGatewayCompleteDeliveryServiceType">
+                  <participant name="FileGatewayCompleteDeliveryService"/>
+                  <output message="FileGatewayCompleteDeliveryServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="DeliveryKey" from="string(FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/DELIVERY_KEY)"></assign>
+                    <assign to="ErrorMessage" from="concat(&apos;Error sending the file (&apos;, FB_Async_CD/Files/File[position()=number(/ProcessData/FB_Async_CD/CDLoopCounter)]/FILENAME, &apos;) via Single Async CD on WFID=&apos;,FB_Async_CD/WFID)"></assign>
+                    <assign to="Success">false</assign>
+                    <assign to="MessageId" from="string(FB_Async_CD/ConsumerMsgID)"></assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+                <operation name="Mailbox Update Service">
+                  <participant name="MailboxUpdate"/>
+                  <output message="MailboxUpdateServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="ExtractableCount">1</assign>
+                    <assign to="MessageId" from="string(FB_Async_CD/ConsumerMsgID)"></assign>
+                    <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                  </output>
+                  <input message="inmsg">
+                  </input>
+                </operation>
+
+                <operation name="Release Service">
+                  <participant name="FB_RELEASE"/>
+                  <output message="ReleaseServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="TARGET">FB_Async_CD/*[local-name()=&apos;ConsumerMsgID&apos; or local-name()=&apos;State&apos;]</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+                <assign name="Assign" to="FB_Async_CD/CDFailures" from="number(FB_Async_CD/CDFailures)+1"></assign>
+                <choice name="OverMaxFailures?">
+                  <select>
+                    <case ref="MaxFailures" activity="MaxFailures"/>
+                  </select>
+
+                  <sequence name="MaxFailures">
+                    <operation name="Business Process Exception">
+                      <participant name="FB_BPEXCEPTION"/>
+                      <output message="BPExceptionServiceTypeInputMessage">
+                        <assign to="." from="*"></assign>
+                        <assign to="exceptionCode">The maximum number of failures for a C:D batch has been exceeded</assign>
+                      </output>
+                      <input message="inmsg">
+                        <assign to="." from="*"></assign>
+                      </input>
+                    </operation>
+
+                  </sequence>
+                </choice>
+              </sequence>
+            </onFault>
+          </sequence>
+          <operation name="Release Service">
+            <participant name="FB_RELEASE"/>
+            <output message="ReleaseServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="TARGET">FB_Async_CD/*[local-name()=&apos;GSSRef&apos; or local-name()=&apos;GSSFilename&apos;]</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <assign name="Assign" to="FB_Async_CD/CDLoopCounter" from="number(FB_Async_CD/CDLoopCounter)+1"></assign>
+          <repeat name="Return to CDLoopStart" ref="CDLoopStart"/>
+
+        </sequence>
+      </choice>
+    </sequence>
+  </sequence>
+</process>

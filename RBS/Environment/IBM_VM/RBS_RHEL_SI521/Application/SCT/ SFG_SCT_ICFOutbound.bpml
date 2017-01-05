@@ -1,0 +1,397 @@
+<process name="SFG_SCT_ICFOutbound">
+  <!--<rule name="BPRestarted">
+    <condition>string-length(SFG_SCT_ICFOutbound/GetStatusRpt)&gt;0 
+and string-length(substring-after(normalize-space(SFG_SCT_ICFOutbound/GetStatusRpt/text()), &apos;restarting from id &apos;))&gt;0 
+and number(sci-get-property(&apos;sfg&apos;, &apos;SFG.TerminateAfterRestart&apos;))=1</condition>
+  </rule>-->
+
+  <rule name="RequiresGZIP">
+    <condition>number(SFG_SCT_ICFOutbound/Parameters/COMPRESSION)=1</condition>
+  </rule>
+
+  <sequence name="MAIN_SEQ">
+    <sequence name="ICFOutbound">
+      <sequence name="SubFlowA: Terminate restarted">
+       <operation name="BPControl">
+					<participant name="FB_BPCONTROL"/>
+					<output message="BPControlInputMessage">
+						<assign to="." from="*"/>
+						<assign to="Action">Terminate</assign>
+						<assign to="HaltOnError">True</assign>
+						<assign to="WFID" from="string(RESTART_FROM)"/>
+					</output>
+					<input message="inmsg">
+						<assign to="." from="*"/>
+					</input>
+				</operation>
+      </sequence>
+      <sequence name="SubFlowB: Compress and Set FileAct parameters">
+        <sequence name="Initialize FA Params">
+        	<assign to="SFG_SCT_ICFOutbound/Filename" from="string(DestinationMessageName)"></assign>
+        	<assign to="SFG_SCT_ICFOutbound/ICFDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+        	<operation name="LWJDBC: Get Bundle Details">
+            <participant name="FB_LWJDBC"/>
+            <output message="LightweightJDBCAdapterTypeInputMessage">
+              <assign to="param1" from="string(SFG_SCT_ICFOutbound/Filename)"></assign>
+              <assign to="paramtype1">String</assign>
+              <assign to="param2">SCT</assign>
+              <assign to="paramtype2">String</assign>
+              <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+              <assign to="query_type">SELECT</assign>
+              <assign to="result_name">result</assign>
+              <assign to="row_name">row</assign>
+              <assign to="sql">SELECT BUNDLE_ID, ENTITY_ID FROM SCT_BUNDLE WHERE FILENAME=? AND SERVICE=?</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+            	<assign to="SFG_SCT_ICFOutbound/BundleID" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//BUNDLE_ID[1])"></assign>
+            	<assign to="SFG_SCT_ICFOutbound/EntityID" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//ENTITY_ID[1])"></assign>
+            </input>
+          </operation>
+        
+          <operation name="BP Metadata">
+            <participant name="FB_BPMETADATA"/>
+            <output message="BPMetaDataServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="SFG_SCT_ICFOutbound/WFID" from="string(BPDATA/WORKFLOW_ID)"></assign>
+            </input>
+          </operation>
+
+          <operation name="LWJDBC: Update Bundle Status (6)">
+            <participant name="FB_LWJDBC"/>
+            <output message="LightweightJDBCAdapterTypeInputMessage">
+              <assign to="param1">6</assign>
+              <assign to="param2" from="string(SFG_SCT_ICFOutbound/WFID)"></assign>
+              <assign to="param3" from="number(SFG_SCT_ICFOutbound/BundleID)"></assign>
+              <assign to="paramtype1">Integer</assign>
+              <assign to="paramtype2">Integer</assign>
+              <assign to="paramtype3">Integer</assign>
+              <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+              <assign to="query_type">UPDATE</assign>
+              <assign to="result_name">result</assign>
+              <assign to="row_name">row</assign>
+              <assign to="sql">UPDATE SCT_BUNDLE SET STATUS=?, WF_ID=? WHERE BUNDLE_ID=?</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+            </input>
+          </operation>
+          
+          <operation name="FG Route Event: FB_8007">
+              <participant name="FileGatewayRouteEventService"/>
+              <output message="FileGatewayRouteEventServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="RouteEntityKey" from="string(FG/DeliveryKey)"></assign>
+            		<assign to="RouteEntityType">DELIVERY</assign>
+            		<assign to="RouteMetadata">NotKnown</assign>
+            		<assign to="RouteDataflowId" from="string(RouteDataflowId)"></assign>
+                <assign to="EventAttributes/BundleID" from="string(SFG_SCT_ICFOutbound/BundleID)" append="true"></assign>
+                <assign to="EventCode">FB_8007</assign>
+                <assign to="ExceptionLevel">Normal</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          <operation name="LWJDBC: Load Entity FileAct Params">
+            <participant name="FB_LWJDBC"/>
+            <output message="LightweightJDBCAdapterTypeInputMessage">
+              <assign to="param1" from="number(SFG_SCT_ICFOutbound/EntityID)"></assign>
+              <assign to="paramtype1">Integer</assign>
+              <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+              <assign to="query_type">SELECT</assign>
+              <assign to="result_name">result</assign>
+              <assign to="row_name">row</assign>
+              <assign to="sql">SELECT * FROM SCT_ENTITY WHERE ENTITY_ID=?</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="SFG_SCT_ICFOutbound/Parameters" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//row/*"></assign>
+            </input>
+          </operation>
+
+          <choice name="Requires Compression?">
+            <select>
+              <case ref="RequiresGZIP" activity="GZIP"/>
+              <case ref="RequiresGZIP" negative="true" activity="Set FileInfo None"/>
+            </select>
+
+            <sequence name="GZIP">
+              <assign name="Assign" to="SFG_SCT_ICFOutbound/FileInfo">SwCompression=GZIP</assign>
+              <operation name="GZIP ICF">
+                <participant name="FB_GZIP"/>
+                <output message="GZIPInputMessage">
+                  <assign to="compressed_filename" from="concat(SFG_SCT_ICFOutbound/Filename, &apos;.GZ&apos;)"></assign>
+                  <assign to="compression_action">compress</assign>
+                  <assign to="PrimaryDocument" from="SFG_SCT_ICFOutbound/ICFDocument/@SCIObjectID"></assign>
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="SFG_SCT_ICFOutbound/ICFDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                </input>
+              </operation>
+
+              <assign name="Assign" to="SFG_SCT_ICFOutbound/Filename" from="concat(SFG_SCT_ICFOutbound/Filename, &apos;.GZ&apos;)"></assign>
+              <operation name="LWJDBC: Update Bundle Filename">
+                <participant name="FB_LWJDBC"/>
+                <output message="LightweightJDBCAdapterTypeInputMessage">
+                  <assign to="param1" from="string(SFG_SCT_ICFOutbound/Filename)"></assign>
+                  <assign to="param2" from="number(SFG_SCT_ICFOutbound/BundleID)"></assign>
+                  <assign to="paramtype1">String</assign>
+                  <assign to="paramtype2">Integer</assign>
+                  <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+                  <assign to="query_type">UPDATE</assign>
+                  <assign to="result_name">result</assign>
+                  <assign to="row_name">row</assign>
+                  <assign to="sql">UPDATE SCT_BUNDLE SET FILENAME=? WHERE BUNDLE_ID=?</assign>
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                </input>
+              </operation>
+
+              <onFault>
+                <sequence name="SCT17">
+                  <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT17</assign>
+                  <operation name="Inline Invoke : Throw Error">
+                    <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+                    <output message="InlineInvokeBPTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </onFault>
+            </sequence>
+            <sequence name="Set FileInfo None">
+              <assign name="Assign" to="SFG_SCT_ICFOutbound/FileInfo">SwCompression=None</assign>
+            </sequence>
+          </choice>
+          <assign name="Assign" to="SFG_SWIFTNet_Client_FA/Filesource" from="SFG_SCT_ICFOutbound/ICFDocument/@SCIObjectID"></assign>
+          
+          <operation name="Assign: Create filename and headers">
+					      	<participant name="AssignService"/>
+					      	<output message="AssignServiceTypeInputMessage">
+					        	<assign to="." from="*"></assign>
+				               	<assign to="SFG_SWIFTNet_Client_FA/OutboundLocation" from="sci-get-property(&apos;sfg&apos;, &apos;SCT.FA.OutboundDataFileLocation&apos;)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/RequestType" from="string(SFG_SCT_ICFOutbound/Parameters/REQUESTTYPE)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/TransferDescr" from="string(SFG_SCT_ICFOutbound/Parameters/TRANSFERDESC)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/TransferInfo" from="string(SFG_SCT_ICFOutbound/Parameters/TRANSFERINFO)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/RequestReference" from="string(SFG_SCT_ICFOutbound/Parameters/REQUESTREF)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/DeliveryNotification" from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.boolean.&apos;,SFG_SCT_ICFOutbound/Parameters/DELIVERYNOTIF))"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/DeliveryNotificationDN" from="string(SFG_SCT_ICFOutbound/Parameters/DELIVERYNOTIFD)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/DeliveryNotificationRT" from="string(SFG_SCT_ICFOutbound/Parameters/DELIVERYNOTIFRT)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/SnF" from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.boolean.&apos;,SFG_SCT_ICFOutbound/Parameters/SNF))"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/Filename" from="string(SFG_SCT_ICFOutbound/Filename)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/NonRepudiation" from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.FA.NonRepudiation.&apos;, SFG_SCT_ICFOutbound/Parameters/ENTITY))"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/NumOfRetries" from="sci-get-property(&apos;sfg&apos;, &apos;SCT.FA.NumOfRetries&apos;)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/RequestorDN" from="string(SFG_SCT_ICFOutbound/Parameters/REQUESTORDN)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/ResponderDN" from="string(SFG_SCT_ICFOutbound/Parameters/RESPONDERDN)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/SecInRetryDelay" from="sci-get-property(&apos;sfg&apos;, &apos;SCT.FA.SecInRetryDelay&apos;)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/ServiceName" from="string(SFG_SCT_ICFOutbound/Parameters/SERVICENAME)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/Trace" from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.boolean.&apos;,SFG_SCT_ICFOutbound/Parameters/TRACE))"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/FileDesc" from="string(SFG_SCT_ICFOutbound/Parameters/FILEDESC)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/FileInfo" from="concat(SFG_SCT_ICFOutbound/FileInfo/text(), &apos;;&apos;, SFG_SCT_ICFOutbound/Parameters/FILEINFO)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/Version6" from="sci-get-property(&apos;sfg&apos;, &apos;SCT.FA.UseVersion6&apos;)"></assign>
+					              <assign to="SFG_SWIFTNet_Client_FA/Sign" from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.FA.E2ESigning.&apos;, SFG_SCT_ICFOutbound/Parameters/ENTITY))"></assign>
+					      	</output>
+					      	<input message="inmsg">
+					        	<assign to="." from="*"></assign>
+					      	</input>
+					    	</operation>
+          
+          
+          <!--<operation name="MultiAssign: Assign ICF FA properties">
+            <participant name="SFG_MULTI_ASSIGN_SG"/>
+            <output message="MultiAssignInputMessage">
+              <assign to="name.1">OutboundLocation</assign>
+              <assign to="name.10">RequestType</assign>
+              <assign to="name.11">TransferDescr</assign>
+              <assign to="name.12">TransferInfo</assign>
+              <assign to="name.13">RequestReference</assign>
+              <assign to="name.14">DeliveryNotification</assign>
+              <assign to="name.15">DeliveryNotificationDN</assign>
+              <assign to="name.16">DeliveryNotificationRT</assign>
+              <assign to="name.17">SnF</assign>
+              <assign to="name.18">Filename</assign>
+              <assign to="name.19">NonRepudiation</assign>
+              <assign to="name.2">NumOfRetries</assign>
+              <assign to="name.3">RequestorDN</assign>
+              <assign to="name.4">ResponderDN</assign>
+              <assign to="name.5">SecInRetryDelay</assign>
+              <assign to="name.6">ServiceName</assign>
+              <assign to="name.7">Trace</assign>
+              <assign to="name.8">FileDesc</assign>
+              <assign to="name.9">FileInfo</assign>
+              <assign to="value.1" from="sci-get-property(&apos;sfg&apos;, &apos;SCT.FA.OutboundDataFileLocation&apos;)"></assign>
+              <assign to="value.10" from="SFG_SCT_ICFOutbound/Parameters/REQUESTTYPE/text()"></assign>
+              <assign to="value.11" from="SFG_SCT_ICFOutbound/Parameters/TRANSFERDESC/text()"></assign>
+              <assign to="value.12" from="SFG_SCT_ICFOutbound/Parameters/TRANSFERINFO/text()"></assign>
+              <assign to="value.13" from="SFG_SCT_ICFOutbound/Parameters/REQUESTREF/text()"></assign>
+              <assign to="value.14" from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.boolean.&apos;,SFG_SCT_ICFOutbound/Parameters/DELIVERYNOTIF/text()))"></assign>
+              <assign to="value.15" from="SFG_SCT_ICFOutbound/Parameters/DELIVERYNOTIFDN/text()"></assign>
+              <assign to="value.16" from="SFG_SCT_ICFOutbound/Parameters/DELIVERYNOTIFRT/text()"></assign>
+              <assign to="value.17" from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.boolean.&apos;,SFG_SCT_ICFOutbound/Parameters/SNF/text()))"></assign>
+              <assign to="value.18" from="SFG_SCT_ICFOutbound/Filename/text()"></assign>
+              <assign to="value.19" from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.FA.NonRepudiation.&apos;, SFG_SCT_ICFOutbound/Parameters/ENTITY/text()))"></assign>
+              <assign to="value.2" from="sci-get-property(&apos;sfg&apos;, &apos;SCT.FA.NumOfRetries&apos;)"></assign>
+              <assign to="value.3" from="SFG_SCT_ICFOutbound/Parameters/REQUESTORDN/text()"></assign>
+              <assign to="value.4" from="SFG_SCT_ICFOutbound/Parameters/RESPONDERDN/text()"></assign>
+              <assign to="value.5" from="sci-get-property(&apos;sfg&apos;, &apos;SCT.FA.SecInRetryDelay&apos;)"></assign>
+              <assign to="value.6" from="SFG_SCT_ICFOutbound/Parameters/SERVICENAME/text()"></assign>
+              <assign to="value.7" from="sci-get-property(&apos;sct&apos;, concat(&apos;sct.boolean.&apos;,SFG_SCT_ICFOutbound/Parameters/TRACE/text()))"></assign>
+              <assign to="value.8" from="SFG_SCT_ICFOutbound/Parameters/FILEDESC/text()"></assign>
+              <assign to="value.9" from="concat(SFG_SCT_ICFOutbound/FileInfo/text(), &apos;;&apos;, SFG_SCT_ICFOutbound/Parameters/FILEINFO/text())"></assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="SFG_SWIFTNet_Client_FA" from="*"></assign>
+            </input>
+          </operation>-->
+
+          <onFault>
+            <sequence name="SCT21">
+              <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT21</assign>
+              <operation name="Inline Invoke : Throw Error">
+                <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+                <output message="InlineInvokeBPTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </onFault>
+        </sequence>
+      </sequence>
+      <sequence name="SubFlowC: Send to SWIFTNet FA">
+        <sequence name="Invoke SWIFTNet Client FA">
+          <operation name="Invoke SFG_SWIFT">
+            <participant name="FB_INVOKE_SUBPROCESS"/>
+            <output message="InvokeSubProcessServiceTypeInputMessage">
+              <assign to="INVOKE_MODE">INLINE</assign>
+              <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+              <assign to="WFD_NAME">SFG_SWIFTNet_Client_FA</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="LWJDBC: Update Bundle Status (100)">
+            <participant name="FB_LWJDBC"/>
+            <output message="LightweightJDBCAdapterTypeInputMessage">
+              <assign to="param1">100</assign>
+              <assign to="param2" from="number(SFG_SCT_ICFOutbound/BundleID)"></assign>
+              <assign to="paramtype1">Integer</assign>
+              <assign to="paramtype2">Integer</assign>
+              <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+              <assign to="query_type">UPDATE</assign>
+              <assign to="result_name">result</assign>
+              <assign to="row_name">row</assign>
+              <assign to="sql">UPDATE SCT_BUNDLE SET STATUS=? WHERE BUNDLE_ID=?</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+            </input>
+          </operation>
+
+          <operation name="Release Service">
+            <participant name="FB_RELEASE"/>
+            <output message="ReleaseServiceTypeInputMessage">
+              <assign to="TARGET">SFG_SCT_ICFOutbound</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <onFault>
+            <sequence name="SCT22">
+              <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT22</assign>
+              <operation name="Inline Invoke : Throw Error">
+                <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+                <output message="InlineInvokeBPTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </onFault>
+        </sequence>
+      </sequence>
+      <onFault>
+        <sequence name="SCT19">
+          <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT19</assign>
+          <operation name="Inline Invoke : Throw Error">
+            <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+            <output message="InlineInvokeBPTypeInputMessage">
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <onFault>
+      <sequence name="HandleError">
+        <operation name="LWJDBC: Update Bundle as error">
+          <participant name="FB_LWJDBC"/>
+          <output message="LightweightJDBCAdapterTypeInputMessage">
+            <assign to="param1" from="string(SFG_ThrowError/ErrorCode[1])"></assign>
+            <assign to="param2" from="number(SFG_SCT_ICFOutbound/BundleID)"></assign>
+            <assign to="paramtype1">String</assign>
+            <assign to="paramtype2">Integer</assign>
+            <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+            <assign to="query_type">UPDATE</assign>
+            <assign to="result_name">result</assign>
+            <assign to="row_name">row</assign>
+            <assign to="sql">UPDATE SCT_BUNDLE SET STATUS=-STATUS, ERROR=? WHERE BUNDLE_ID=? AND STATUS &gt;=0</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="exceptionCode">Marking process as halted</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Release Service">
+          <participant name="FB_RELEASE"/>
+          <output message="ReleaseServiceTypeInputMessage">
+            <assign to="TARGET">SFG_SCT_ICFOutbound</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

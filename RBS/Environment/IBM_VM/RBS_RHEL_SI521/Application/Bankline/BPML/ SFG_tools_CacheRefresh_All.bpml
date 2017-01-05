@@ -1,0 +1,155 @@
+<process name="SFG_tools_CacheRefresh_All">
+  <rule name="NodesLeft">
+    <condition>number(LoopCounter)&lt;=number(NodeCount)</condition>
+  </rule>
+
+  <sequence name="Sequence Start">
+    <operation name="ClusterUtils: Get nodes">
+      <participant name="FB_CLUSTERUTILS"/>
+      <output message="ClusterUtilsInputMessage">
+        <assign to="Action">ListNodes</assign>
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="LoopCounter" from="number(1)"></assign>
+        <assign to="NodeCount" from="count(//Node)"></assign>
+        <assign to="Nodes" from="Nodes/*"></assign>
+      </input>
+    </operation>
+
+    <sequence name="LoopStart">
+      <choice name="IsNodesLeft?">
+        <select>
+          <case ref="NodesLeft" activity="RefreshNode"/>
+        </select>
+
+        <sequence name="RefreshNode">
+          <assign name="Assign" to="preferredNode" from="string(Nodes/Node[position()=number(//LoopCounter)])"></assign>
+          <operation name="Cache Refresh [sfg]">
+            <participant name="FB_CACHE_REFRESH"/>
+            <output message="CacheRefreshServiceTypeInputMessage">
+              <assign to="cache_name">sfg</assign>
+              <assign to="cache_type">properties</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Cache Refresh [sfgerror]">
+            <participant name="FB_CACHE_REFRESH"/>
+            <output message="CacheRefreshServiceTypeInputMessage">
+              <assign to="cache_name">sfgerror</assign>
+              <assign to="cache_type">properties</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Cache Refresh [sfgrouting]">
+            <participant name="FB_CACHE_REFRESH"/>
+            <output message="CacheRefreshServiceTypeInputMessage">
+              <assign to="cache_name">sfgrouting</assign>
+              <assign to="cache_type">properties</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Cache Refresh [sfgt2dentity]">
+            <participant name="FB_CACHE_REFRESH"/>
+            <output message="CacheRefreshServiceTypeInputMessage">
+              <assign to="cache_name">sfgt2dentity</assign>
+              <assign to="cache_type">properties</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Cache Refresh [sct]">
+            <participant name="FB_CACHE_REFRESH"/>
+            <output message="CacheRefreshServiceTypeInputMessage">
+              <assign to="cache_name">sct</assign>
+              <assign to="cache_type">properties</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Cache Refresh [xct]">
+            <participant name="FB_CACHE_REFRESH"/>
+            <output message="CacheRefreshServiceTypeInputMessage">
+              <assign to="cache_name">xct</assign>
+              <assign to="cache_type">properties</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Cache Refresh [mqi]">
+            <participant name="FB_CACHE_REFRESH"/>
+            <output message="CacheRefreshServiceTypeInputMessage">
+              <assign to="cache_name">mqi</assign>
+              <assign to="cache_type">properties</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+         <operation name="Cache Refresh [gpl]">
+            <participant name="FB_CACHE_REFRESH"/>
+            <output message="CacheRefreshServiceTypeInputMessage">
+              <assign to="cache_name">gpl</assign>
+              <assign to="cache_type">properties</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Cache Refresh [roi]">
+            <participant name="FB_CACHE_REFRESH"/>
+            <output message="CacheRefreshServiceTypeInputMessage">
+              <assign to="cache_name">roi</assign>
+              <assign to="cache_type">properties</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <operation name="Cache Refresh [roifilenames]">
+            <participant name="FB_CACHE_REFRESH"/>
+            <output message="CacheRefreshServiceTypeInputMessage">
+              <assign to="cache_name">roifilenames</assign>
+              <assign to="cache_type">properties</assign>
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+          <assign name="Assign" to="LoopCounter" from="number(LoopCounter)+1"></assign>
+          <repeat name="Return to LoopStart" ref="LoopStart"/>
+
+        </sequence>
+      </choice>
+    </sequence>
+  </sequence>
+</process>

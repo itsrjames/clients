@@ -1,0 +1,272 @@
+<process name="FB_GPL_Inbound_Validation">
+  <rule name="NoCSID">
+    <condition>string-length(GPL/CSID)&lt;=0</condition>
+  </rule>
+
+  <rule name="Non-Unique CSID">
+    <condition>number(GPL/Nonunique)!=0</condition>
+  </rule>
+
+  <rule name="StartDate Not Reached">
+    <condition>number(GPL/StartDue)&gt;0</condition>
+  </rule>
+
+  <rule name="EndDate Reached">
+    <condition>number(GPL/EndDue)&lt;0</condition>
+  </rule>
+
+  <rule name="Channel Not Alowed">
+    <condition>translate(GPL/ChannelAllowed, &apos;true&apos;, &apos;TRUE&apos;)!=&apos;TRUE&apos;</condition>
+  </rule>
+
+  <rule name="Submitter Inactive">
+    <condition>translate(GPL/Status, &apos;act&apos;, &apos;ACT&apos;)!=&apos;ACT&apos;</condition>
+  </rule>
+
+  <sequence name="Inbound Validation">
+    <choice name="CSID Found?">
+      <select>
+        <case ref="NoCSID" activity="No CSID"/>
+      </select>
+
+      <sequence name="No CSID">
+        <operation name="Assign: Set GPL_RR00">
+          <participant name="AssignService"/>
+          <output message="AssignServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="GPL/RRCode">GPL_RR00</assign>
+            <assign to="GPL/RRReport">Submitter is unknown to GPL</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="FileBrokerEvent: FBK072">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK072</assign>
+            <assign to="Info" from="concat(&apos;DataFlowID: &apos;, RouteDataflowId)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode" from="concat(&apos;[&apos;, GPL/RRCode, &apos;] &apos;, GPL/RRReport)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+    <choice name="Not Unique CSID?">
+      <select>
+        <case ref="Non-Unique CSID" activity="Non-Unique"/>
+      </select>
+
+      <sequence name="Non-Unique">
+        <operation name="Assign: Set GPL_RR00">
+          <participant name="AssignService"/>
+          <output message="AssignServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="GPL/RRCode">GPL_RR00</assign>
+            <assign to="GPL/RRReport">Submitter cannot be identified</assign>
+            <assign to="GPL/CSID" from="sci-get-property(&apos;fbgpl&apos;, &apos;FSN.Unknown.CSID&apos;)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="FileBrokerEvent: FBK072">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK072</assign>
+            <assign to="Info" from="concat(&apos;DataFlowID: &apos;, RouteDataflowId)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode" from="concat(&apos;[&apos;, GPL/RRCode, &apos;] &apos;, GPL/RRReport)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+    <choice name="Valid Submitter?">
+      <select>
+        <case ref="StartDate Not Reached" activity="Inactive Start"/>
+        <case ref="EndDate Reached" activity="Inactive End"/>
+        <case ref="Channel Not Alowed" activity="Channel Not Permitted"/>
+        <case ref="Submitter Inactive" activity="Submitter Not Active"/>
+      </select>
+
+      <sequence name="Inactive Start">
+        <operation name="Assign: Set GPL_RR02">
+          <participant name="AssignService"/>
+          <output message="AssignServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="GPL/RRCode">GPL_RR02</assign>
+            <assign to="GPL/RRReport">Submitter is not active. Start Date has not been reached</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="FileBrokerEvent: FBK071">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK071</assign>
+            <assign to="Info" from="concat(&apos;DataFlowID: &apos;, RouteDataflowId)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode" from="concat(&apos;[&apos;, GPL/RRCode, &apos;] &apos;, GPL/RRReport)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+      <sequence name="Inactive End">
+        <operation name="Assign: Set GPL_RR02">
+          <participant name="AssignService"/>
+          <output message="AssignServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="GPL/RRCode">GPL_RR02</assign>
+            <assign to="GPL/RRReport">Submitter is not active. End Date has been reached</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="FileBrokerEvent: FBK071">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK071</assign>
+            <assign to="Info" from="concat(&apos;DataFlowID: &apos;, RouteDataflowId)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode" from="concat(&apos;[&apos;, GPL/RRCode, &apos;] &apos;, GPL/RRReport)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+      <sequence name="Channel Not Permitted">
+        <operation name="Assign: Set GPL_RR02">
+          <participant name="AssignService"/>
+          <output message="AssignServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="GPL/RRCode">GPL_RR02</assign>
+            <assign to="GPL/RRReport">The submitter is not permitted to send files over this channel</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="FileBrokerEvent: FBK071">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK071</assign>
+            <assign to="Info" from="concat(&apos;DataFlowID: &apos;, RouteDataflowId)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode" from="concat(&apos;[&apos;, GPL/RRCode, &apos;] &apos;, GPL/RRReport)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+      <sequence name="Submitter Not Active">
+        <operation name="Assign: Set GPL_RR02">
+          <participant name="AssignService"/>
+          <output message="AssignServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="GPL/RRCode">GPL_RR02</assign>
+            <assign to="GPL/RRReport">Submitter is not active and is either pending or suspended</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="FileBrokerEvent: FBK071">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK071</assign>
+            <assign to="Info" from="concat(&apos;DataFlowID: &apos;, RouteDataflowId)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode" from="concat(&apos;[&apos;, GPL/RRCode, &apos;] &apos;, GPL/RRReport)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+  </sequence>
+</process>

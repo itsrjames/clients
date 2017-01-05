@@ -1,0 +1,94 @@
+<process name="tools_SWIFT7LoopCheckSend_SnF"> 
+
+
+
+  <sequence name="MAIN_SEQ"> 
+    <sequence name="SubFlowA: Set FileAct parameters"> 
+      <sequence name="Initialize FA Params"> 
+        <operation name="Lightweight JDBC Adapter"> 
+          <participant name="FB_LWJDBC"/> 
+          <output message="LightweightJDBCAdapterTypeInputMessage"> 
+            <assign to="param1">TOOLS_SWIFT7_LOOP_CHECK_SNF</assign> 
+            <assign to="paramtype1">String</assign> 
+            <assign to="pool">oraclePool</assign> 
+            <assign to="query_type">SELECT</assign> 
+            <assign to="result_name">ROUTING_RULES</assign> 
+            <assign to="row_name">ROUTING_RULE</assign> 
+            <assign to="sql">SELECT * FROM SWIFTNET_ROUTE WHERE ROUTE_NAME=?</assign> 
+            <assign to="." from="*"></assign> 
+          </output> 
+          <input message="inmsg"> 
+            <assign to="." from="*"></assign> 
+          </input> 
+        </operation> 
+
+        
+        <operation name="MultiAssign: Assign STS FA properties"> 
+          <participant name="AssignService"/> 
+          <output message="AssignServiceInputMessage"> 
+            <assign to="OutboundLocation" from="sci-get-property(&apos;sfg&apos;, &apos;STS.FA.OutboundDataFileLocation&apos;)"></assign>
+
+            <assign to="RequestType" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//REQUEST_TYPE/text()"></assign> 
+            <assign to="TransferDescr" from="string(&apos;&apos;)"></assign> 
+            <assign to="TransferInfo" from="string(&apos;&apos;)"></assign> 
+            <assign to="RequestReference" from="string(&apos;&apos;)"></assign> 
+            <assign to="DeliveryNotification">false</assign> 
+            <assign to="DeliveryNotificationDN" from="string(&apos;&apos;)"></assign> 
+            <assign to="DeliveryNotificationRT" from="string(&apos;&apos;)"></assign> 
+            <assign to="SnF">true</assign> 
+            <assign to="NonRepudiation">false</assign> 
+            <assign to="NumOfRetries" from="sci-get-property(&apos;sfg&apos;, &apos;STS.FA.NumOfRetries&apos;)"></assign>
+
+            <assign to="RequestorDN" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//REQUESTOR/text()"></assign> 
+            <assign to="ResponderDN" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//RESPONDER/text()"></assign> 
+            <assign to="SecInRetryDelay" from="sci-get-property(&apos;sfg&apos;, &apos;STS.FA.SecInRetryDelay&apos;)"></assign>
+
+            <assign to="ServiceName" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//SERVICE/text()"></assign> 
+            <assign to="Trace">false</assign> 
+            <assign to="FileDesc" from="string(&apos;&apos;)"></assign> 
+            <assign to="FileInfo" from="string(&apos;SwCompression=None&apos;)"></assign> 
+                <assign to="NotificationQueue">rbosgb2l_generic!p</assign> 
+        <assign to="Version6">false</assign> 
+            <assign to="." from="*"></assign> 
+          </output> 
+          <input message="inmsg"> 
+            <assign to="FB_SWIFT_Client_Put_FA" from="*"></assign> 
+          </input> 
+        </operation> 
+
+<assign name="Assign" to="FB_SWIFT_Client_Put_FA/Filesource" from="PrimaryDocument/@SCIObjectID" append="true"></assign>
+
+        <assign to="FB_SWIFT_Client_Put_FA/Filename">TestMessage.xml</assign> 
+
+        <operation name="Release: Primary Document"> 
+          <participant name="FB_RELEASE"/> 
+          <output message="ReleaseServiceTypeInputMessage"> 
+            <assign to="TARGET">PrimaryDocument</assign> 
+            <assign to="." from="*"></assign> 
+          </output> 
+          <input message="inmsg"> 
+            <assign to="." from="*"></assign> 
+          </input> 
+        </operation> 
+
+      </sequence> 
+    </sequence> 
+    <sequence name="SubFlowB: Send to SWIFTNet FA"> 
+      <sequence name="Invoke SWIFTNet Client FA"> 
+        <operation name="Invoke SFG_SWIFT"> 
+          <participant name="FB_INVOKE_SUBPROCESS"/> 
+          <output message="InvokeSubProcessServiceTypeInputMessage"> 
+            <assign to="INVOKE_MODE">INLINE</assign> 
+            <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign> 
+            <assign to="WFD_NAME">FB_SWIFT_Client_Put_FA</assign> 
+            <assign to="." from="*"></assign> 
+          </output> 
+          <input message="inmsg"> 
+            <assign to="." from="*"></assign> 
+          </input> 
+        </operation> 
+
+      </sequence> 
+    </sequence> 
+  </sequence> 
+</process> 

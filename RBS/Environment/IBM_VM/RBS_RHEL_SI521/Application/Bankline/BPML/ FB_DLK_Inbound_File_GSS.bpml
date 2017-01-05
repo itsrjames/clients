@@ -1,0 +1,59 @@
+<process name="FB_DLK_Inbound_File_GSS">
+  <sequence name="GSS Inbound Datalink File">
+    <operation name="Assign: Set static channel values">
+      <participant name="AssignService"/>
+      <output message="AssignServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="GPL/Channel">GSS</assign>
+        <assign to="GPL/CSID" from="sci-get-property(&apos;fbdatalink&apos;, &apos;FSN.Unknown.CSID&apos;)"></assign>
+        <assign to="GPL/DCGRef" from="string(RFilename)"></assign>
+        <assign to="GPL/Format">DLINK</assign>
+        <assign to="GPL/Type">DL</assign>
+        <assign to="GPL/Extension" from="string(&apos;&apos;)"></assign>
+        <assign to="GPL/DuplicateCheck">false</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="JDBC: Query SA">
+      <participant name="FB_SA_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="param1" from="string(GPL/DCGRef)"></assign>
+        <assign to="param2">RESPONSE_AREA</assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="query_type">PROCEDURE</assign>
+        <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbdatalink&apos;, &apos;SASchema&apos;), &apos;.YJSC31_DLKIN_CUST(?,?)&apos;)"></assign>
+        <assign to="paramDirection2">OUT</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="GPL/CREF" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUST_AGMT_REF/text()"></assign>
+        <assign to="GPL/CSID" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CESD_CUSTOMER_ID/text()"></assign>
+        <assign to="GPL/DSigFormat" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;DDSGFMTI&apos;][1]/SERVICE_DETAIL[1]/text()"></assign>
+        <assign to="GPL/EndDue" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/END_DUE[1]/text()"></assign>
+        <assign to="GPL/Nonunique" from="count(DocToDOM(PrimaryDocument, &apos;false&apos;)/row)-2"></assign>
+        <assign to="GPL/StartDue" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/START_DUE/text()"></assign>
+        <assign to="GPL/Status" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATUS_CODE/text()"></assign>
+        <assign to="Temp/SpecifiedChannel" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;DLICHNL&apos;]/SERVICE_DETAIL[1]/text()" append="true"></assign>
+        <assign to="YJSC31Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+      </input>
+    </operation>
+
+    <assign name="Assign" to="GPL/ChannelAllowed" from="boolean((string(Temp/SpecifiedChannel)=&apos;4&apos; or string(Temp/SpecifiedChannel)=&apos;6&apos;))"></assign>
+    <operation name="Invoke FB_GPL_Inbound_Validation (inline)">
+      <participant name="FB_INVOKE_SUBPROCESS"/>
+      <output message="InvokeSubProcessServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="INVOKE_MODE">INLINE</assign>
+        <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+        <assign to="WFD_NAME">FB_GPL_Inbound_Validation</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+  </sequence>
+</process>

@@ -1,0 +1,216 @@
+<process name = "FB_CRL_Download"> 
+  <rule name="CRLs Left">
+    <condition>string-length(FB_CRL_Download/Current)&gt;0</condition>
+  </rule>
+
+  <rule name="CRL Not Found">
+    <condition>number(FB_CRL_Download/CRLFound)=0</condition>
+  </rule>
+
+  <sequence name="Main">
+    <operation name="Lock">
+      <participant name="FB_LOCK"/>
+      <output message="LockServiceTypeInputMessage">
+        <assign to="USER">FBSystem</assign>
+        <assign to="LOCK_KEY">FB_CRL_Download</assign>
+        <assign to="ACTION">LOCK</assign>
+        <assign to="DURATION">-1</assign>
+        <assign to="CLEAR_ON_START_UP">TRUE</assign>
+      </output>
+      <input message="inmsg">
+      </input>
+    </operation>
+
+    <sequence name="Download CRL">
+      <sequence name="SubFlow: CRL Processing">
+        <sequence name="CRL Processing">
+          <assign name="Assign" to="FB_CRL_Download/Sequence" from="concat(sci-get-property(&apos;fbglobal&apos;, &apos;CRL.ExecuteSeq&apos;), &apos;;&apos;)"></assign>
+          <sequence name="LoopStart">
+            <assign name="Assign" to="FB_CRL_Download/Current" from="substring-before(FB_CRL_Download/Sequence, &apos;;&apos;)"></assign>
+            <choice name="CRLs Left?">
+              <select>
+                <case ref="CRLs Left" activity="Query CRL Info"/>
+              </select>
+
+              <sequence name="Query CRL Info">
+                <sequence name="TryBlock">
+                  <operation name="JDBC_Query CRL INFO">
+                    <participant name="FB_LWJDBC"/>
+                    <output message="LightweightJDBCAdapterTypeInputMessage">
+                      <assign to="param2" from="sci-get-property(&apos;fbglobal&apos;, concat(&apos;CRL.IssueTime.&apos;, FB_CRL_Download/Current))"></assign>
+                      <assign to="paramtype2">Integer</assign>
+                      <assign to="param1" from="sci-get-property(&apos;fbglobal&apos;, concat(&apos;CRL.IssuerRDN.&apos;, FB_CRL_Download/Current))"></assign>
+                      <assign to="paramtype1">String</assign>
+                      <assign to="sql">SELECT COUNT(*) as CRLCOUNT FROM CRL_INFO WHERE NORM_ISSUER_RDN = ? AND NEXT_UPDATE &gt; sysdate + (?/60/24)</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="FB_CRL_Download/CRLFound" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//row/CRLCOUNT/text()"></assign>
+                    </input>
+                  </operation>
+
+                  <choice name="CRL Found?">
+                    <select>
+                      <case ref="CRL Not Found" activity="Get CRL"/>
+                    </select>
+
+                    <sequence name="Get CRL">
+                      <sequence name="HTTP GET">
+                        <operation name="HTTP Client Begin Session Service">
+                          <participant name="FB_HTTP_CLIENT_BEGIN_SESSION"/>
+                          <output message="HTTPClientBeginSessionServiceTypeInputMessage">
+                            <assign to="RemoteHost" from="sci-get-property(&apos;fbglobal&apos;, concat(&apos;CRL.Host.&apos;, FB_CRL_Download/Current))"></assign>
+                            <assign to="UsingRevealedPasswd">true</assign>
+                            <assign to="HTTPClientAdapter">FB_HTTP_CLIENT_SG</assign>
+                            <assign to="RemotePasswd" from="sci-get-property(&apos;fbglobal&apos;, concat(&apos;CRL.RemotePassword.&apos;, FB_CRL_Download/Current))"></assign>
+                            <assign to="RemoteUserId" from="sci-get-property(&apos;fbglobal&apos;, concat(&apos;CRL.RemoteUser.&apos;, FB_CRL_Download/Current))"></assign>
+                            <assign to="RemotePort" from="sci-get-property(&apos;fbglobal&apos;, concat(&apos;CRL.Port.&apos;, FB_CRL_Download/Current))"></assign>
+                            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                          </output>
+                          <input message="inmsg">
+                            <assign to="FB_CRL_Download" from="SessionToken"></assign>
+                          </input>
+                        </operation>
+
+                        <operation name="HTTP Client GET Service">
+                          <participant name="FB_HTTP_CLIENT_GET"/>
+                          <output message="HTTPClientGetServiceTypeInputMessage">
+                            <assign to="SessionToken" from="string(FB_CRL_Download/SessionToken)"></assign>
+                            <assign to="URI" from="sci-get-property(&apos;fbglobal&apos;, concat(&apos;CRL.URI.&apos;, FB_CRL_Download/Current))"></assign>
+                            <assign to="ResponseTimeout">30</assign>
+                            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                          </output>
+                          <input message="inmsg">
+                            <assign to="." from="*"></assign>
+                          </input>
+                        </operation>
+
+                        <onFault>
+                          <sequence name="HTTP Error">
+                            <operation name="HTTP Client End Session Service">
+                              <participant name="FB_HTTP_CLIENT_END_SESSION"/>
+                              <output message="HTTPClientEndSessionServiceTypeInputMessage">
+                                <assign to="SessionToken" from="string(FB_CRL_Download/SessionToken)"></assign>
+                              </output>
+                              <input message="inmsg">
+                              </input>
+                            </operation>
+
+                            <operation name="Business Process Exception">
+                              <participant name="FB_BPEXCEPTION"/>
+                              <output message="BPExceptionServiceTypeInputMessage">
+                                <assign to="." from="*"></assign>
+                                <assign to="exceptionCode">Continuing error state after terminating HTTP Session</assign>
+                              </output>
+                              <input message="inmsg">
+                                <assign to="." from="*"></assign>
+                              </input>
+                            </operation>
+
+                          </sequence>
+                        </onFault>
+                      </sequence>
+                      <operation name="HTTP Client End Session Service">
+                        <participant name="FB_HTTP_CLIENT_END_SESSION"/>
+                        <output message="HTTPClientEndSessionServiceTypeInputMessage">
+                          <assign to="SessionToken" from="string(FB_CRL_Download/SessionToken)"></assign>
+                        </output>
+                        <input message="inmsg">
+                        </input>
+                      </operation>
+
+                      <operation name="CRL Processing Service">
+                        <participant name="FB_CRL_PROCESSING"/>
+                        <output message="CRLProcessingServiceInputMessage">
+                          <assign to="." from="*"></assign>
+                          <assign to="FailOnUnsupportedCRLCritExtns">true</assign>
+                          <assign to="FailOnExpiredCRL">true</assign>
+                          <assign to="ShowTranscripts">true</assign>
+                          <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                          <assign to="RevokePrivateKeys">false</assign>
+                        </output>
+                        <input message="inmsg">
+                          <assign to="." from="*"></assign>
+                        </input>
+                      </operation>
+
+                    </sequence>
+                  </choice>
+                  <onFault>
+                    <sequence name="FBK045-indv">
+                      <operation name="FileBrokerEvent">
+                        <participant name="FB_FILEBROKER_EVENT"/>
+                        <output message="FileBrokerEventInputMessage">
+                          <assign to="." from="*"></assign>
+                          <assign to="EventCode">FBK045</assign>
+                        </output>
+                        <input message="inmsg">
+                          <assign to="." from="*"></assign>
+                        </input>
+                      </operation>
+
+                    </sequence>
+                  </onFault>
+                </sequence>
+                <assign name="Assign" to="FB_CRL_Download/Sequence" from="substring-after(FB_CRL_Download/Sequence,concat(FB_CRL_Download/Current, &apos;;&apos;))"></assign>
+                <repeat name="Return to LoopStart" ref="LoopStart"/>
+
+              </sequence>
+            </choice>
+          </sequence>
+        </sequence>
+      </sequence>
+      <operation name="UnLock">
+        <participant name="FB_LOCK"/>
+        <output message="LockServiceTypeInputMessage">
+          <assign to="USER">FBSystem</assign>
+          <assign to="LOCK_KEY">FB_CRL_Download</assign>
+          <assign to="ACTION">UNLOCK</assign>
+        </output>
+        <input message="inmsg">
+        </input>
+      </operation>
+
+      <onFault>
+        <sequence name="Release Lock">
+          <operation name="UnLock">
+            <participant name="FB_LOCK"/>
+            <output message="LockServiceTypeInputMessage">
+              <assign to="USER">FBSystem</assign>
+              <assign to="LOCK_KEY">FB_CRL_Download</assign>
+              <assign to="ACTION">UNLOCK</assign>
+            </output>
+            <input message="inmsg">
+            </input>
+          </operation>
+
+          <operation name="Business Process Exception">
+            <participant name="FB_BPEXCEPTION"/>
+            <output message="BPExceptionServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="exceptionCode">Continuing error state after releasing lock</assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <onFault>
+      <sequence name="FBK045">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK045</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

@@ -1,0 +1,29 @@
+U.S Department of Veterans Affairs
+-----------------------------------------------------
+Business Scenario Use Cases
+-----------------------------------------------------
+Use Case: VA_UC001
+-----------------------------------------------------
+External partner sign-on via HTTPS (myFileGateway)
+post file to ISFG, file routed to file system partner
+and written to UNC file system path with basic
+custom protocol
+-----------------------------------------------------
+Assets
+-----------------------------------------------------
+ISFG Community						==>	{DATA CENTER}_COMMUNITY
+ISFG HTTPS External Partner (Producer)	==>	COMRES-TEST-01
+ISFG CD Test Partner (Consumer)		==>	{DATA CENTER}-MFRAME-TEST-01
+Virtual Root						==>	inst-val-uc001-sftp-1
+										inst-val-uc001-cd-1
+ISFG CD Server Adapter				==>	{DATA CENTER}_CDSA
+Test File							==> va_uc001.txt
+ISFG Routing Channel Template		==>	VA_UC001 ==> for file system write
+										VA_UC001_Delivery_By_CD_To_Mainframe
+ISFG Routing Channel				==>	as per RCT
+NetMap								==>	{DATA CENTER}_NETMAP
+CD Node								==>	CD.COMRES
+-----------------------------------------------------
+How to Test
+-----------------------------------------------------
+1.Log on via myFileGateway as COMRES-TEST-01

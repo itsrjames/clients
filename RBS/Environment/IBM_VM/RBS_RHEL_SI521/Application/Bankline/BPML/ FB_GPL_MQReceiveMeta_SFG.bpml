@@ -1,0 +1,188 @@
+<process name="FB_GPL_MQReceiveMeta_SFG">
+  <rule name="AckNotSent?">
+    <condition>number(FB_MQProcessMeta/MQStatus)=0 or string-length(FB_MQProcessMeta/MQStatus)=0</condition>
+  </rule>
+
+  <rule name="Retries Left">
+    <condition>count(MQRetry)&lt;sci-get-property(&apos;fbmq&apos;, &apos;SFG.GPL.Ack.Retries&apos;)</condition>
+  </rule>
+
+  <sequence name="SFG_Main">
+    <sequence name="Terminate Restarted">
+      <operation name="BPControl">
+        <participant name="FB_BPCONTROL"/>
+        <output message="BPControlInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="Action">Terminate</assign>
+          <assign to="HaltOnError">True</assign>
+          <assign to="WFID" from="string(RESTART_FROM)"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <onFault>
+        <sequence name="NoAction">
+          <assign to="TerminateError">TRUE</assign>
+        </sequence>
+      </onFault>
+    </sequence>
+    <operation name="Assign init parms">
+      <participant name="AssignService"/>
+      <output message="AssignServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="FB_MQProcessMeta/Producer">SFG</assign>
+        <assign to="FB_MQProcessMeta/AlertDelay" from="sci-get-property(&apos;fbmq&apos;, &apos;SFG.GPL.Ack.AlertDelay&apos;)"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Invoke FB_MQProcessMeta (inline)">
+      <participant name="FB_INVOKE_SUBPROCESS"/>
+      <output message="InvokeSubProcessServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="INVOKE_MODE">INLINE</assign>
+        <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+        <assign to="WFD_NAME">FB_MQProcessMeta</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <sequence name="MQ">
+      <operation name="WMQ: Return Ack message">
+        <participant name="FB_GPL_WMQ_FB_SFG_Ack_Snd_SG"/>
+        <output message="WebsphereMQInputMessage">
+          <assign to="buffersize" from="sci-get-property(&apos;fbmq&apos;, &apos;SFG.GPL.BufferSize&apos;)"></assign>
+          <assign to="snd_MQMD_msgType">DATAGRAM</assign>
+          <assign to="snd_maxMsgSize" from="sci-get-property(&apos;fbmq&apos;, &apos;SFG.GPL.MaxMsgSize&apos;)"></assign>
+          <assign to="snd_MQMD_correlId" from="string(MQ/correlationId)"></assign>
+          <assign to="snd_HexToByte_corId">Yes</assign>
+          <assign to="PrimaryDocument" from="FB_MQProcessMeta/AckMessage/@SCIObjectID"></assign>
+          <assign to="snd_noSegSplit">Yes</assign>
+          <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+        </output>
+        <input message="inmsg">
+          <assign to="FB_MQProcessMeta/MQ" from="MQ/*"></assign>
+        </input>
+      </operation>
+
+      <onFault>
+        <sequence name="RetryMQ">
+          <choice name="RetriesLeft?">
+            <select>
+              <case ref="Retries Left" activity="DoRetry"/>
+            </select>
+
+            <sequence name="DoRetry">
+              <assign name="Assign" to="MQRetry" from="count(MQRetry)" append="true"></assign>
+              <operation name="Wait">
+                <participant name="WaitService"/>
+                <output message="WaitServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="WAIT_INTERVAL" from="sci-get-property(&apos;fbmq&apos;, &apos;SFG.GPL.Ack.RetryInterval&apos;)"></assign>
+                  <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+              <repeat name="Repeat" ref="MQ"/>
+
+            </sequence>
+          </choice>
+          <operation name="Business Process Exception">
+            <participant name="FB_BPEXCEPTION"/>
+            <output message="BPExceptionServiceTypeInputMessage">
+              <assign to="." from="*"></assign>
+              <assign to="exceptionCode" from="concat(&apos;All MQ retry attempts have failed: &apos;, Prev_NotSuccess_Adv_Status)"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <choice name="SendAck?">
+      <select>
+        <case ref="AckNotSent?" negative="true" activity="Ack Already sent"/>
+      </select>
+
+      <sequence name="Ack Already sent">
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode">An ack message has already been sent</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <onFault>
+          <sequence name="Sequence Start">
+            <assign name="Assign" to="WarningHandled">true</assign>
+          </sequence>
+        </onFault>
+      </sequence>
+    </choice>
+    <operation name="JDBC: Update MQ Transfer Status (1)">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="param2" from="string(FB_MQProcessMeta/WFID)"></assign>
+        <assign to="paramtype2">Long</assign>
+        <assign to="param3" from="string(MQ/correlationId)"></assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="paramtype4">String</assign>
+        <assign to="param4" from="string(FB_MQProcessMeta/Producer)"></assign>
+        <assign to="query_type">UPDATE</assign>
+        <assign to="param1">1</assign>
+        <assign to="paramtype1">Integer</assign>
+        <assign to="sql">UPDATE FB_MQ_TRANSFER SET STATUS=?,LAST_MODIFIED=sysdate, ACK_WFID=?  WHERE CORRELATION_ID=? AND PRODUCER=? AND CONSUMER=? AND STATUS = ? AND ARCHIVED=?</assign>
+        <assign to="param7">0</assign>
+        <assign to="paramtype6">Integer</assign>
+        <assign to="param6">0</assign>
+        <assign to="paramtype7">Integer</assign>
+        <assign to="paramtype5">String</assign>
+        <assign to="param5">FB</assign>
+      </output>
+      <input message="inmsg">
+      </input>
+    </operation>
+
+    <onFault>
+      <sequence name="FBK051">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK051</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode">Setting process as halted</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

@@ -1,0 +1,83 @@
+<process name="FB_Archive_Rollover">
+  <sequence name="Archive Rollover">
+    <operation name="XSLT: Create Export input file">
+      <participant name="FB_XSLT"/>
+      <output message="XSLTServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="xslt_name">FB_Archive_Rollover_Export</assign>
+        <assign to="xml_input_from">ProcData</assign>
+        <assign to="input_pd_xpath">/ProcessData</assign>
+        <assign to="xml_input_validation">NO</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Export Backup Service configuration">
+      <participant name="ExportService"/>
+      <output message="ExportTypeInputMessage">
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Timestamp: Create annual directory (yyyy)">
+      <participant name="TimestampUtilService"/>
+      <output message="TimestampUtilServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="action">format</assign>
+        <assign to="baseTime">now</assign>
+        <assign to="format">yyyy</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Document XPath Replace - BackupDir">
+      <participant name="DocXPathReplace"/>
+      <output message="DocXPathReplaceInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="keepDocEncoding">true</assign>
+        <assign to="keepDocType">true</assign>
+        <assign to="textNodeXPath">//*[local-name()=&apos;SERVICE_INSTANCE&apos;]/*[local-name()=&apos;PARM&apos;]/*[local-name()=&apos;name&apos;][.=&apos;backupDir&apos;]/../*[local-name()=&apos;value&apos;]</assign>
+        <assign to="replacementText" from="concat(sci-get-property(&apos;fbglobal&apos;, &apos;Archive.RootDir&apos;), &apos;/arc_data_&apos;, ((number(formattedTime)-1) mod 7)+1)"></assign>
+        <assign to="replaceMultiple">false</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Document XPath Replace - targetEnv">
+      <participant name="DocXPathReplace"/>
+      <output message="DocXPathReplaceInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="keepDocEncoding">true</assign>
+        <assign to="keepDocType">true</assign>
+        <assign to="textNodeXPath">//*[local-name()=&apos;SERVICE_INSTANCE&apos;]/*[local-name()=&apos;targetenv&apos;]</assign>
+        <assign to="replacementText" from="sci-get-property(&apos;fbglobal&apos;, &apos;Archive.Node&apos;)"></assign>
+        <assign to="replaceMultiple">false</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Import Service">
+      <participant name="ImportService"/>
+      <output message="ImportTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="Context">FBSystem</assign>
+        <assign to="Identity">Archive</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+  </sequence>
+</process>

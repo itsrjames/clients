@@ -1,0 +1,68 @@
+<process name="FB_Defer_Delivery_Event">
+  <rule name="DeferRecordFound">
+    <condition>count(Defer/DELIVERY_KEY)=1</condition>
+  </rule>
+
+  <sequence name="DeferDelivery">
+    <operation name="JDBC: Find Defer Delivery record">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1" from="string(XpathBPLauncherEventListener/Event/messageId)"></assign>
+        <assign to="param2">0</assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="paramtype2">Integer</assign>
+        <assign to="sql">SELECT DELIVERY_KEY, CONSUMER_FILENAME, DEFER_KEY, DEFER_TYPE FROM FB_DEFER_DELIVERY WHERE MESSAGE_ID=? AND ARCHIVED=?</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="Defer" from="DocToDOM(PrimaryDocument)/row[1]/*" append="true"></assign>
+      </input>
+    </operation>
+
+    <choice name="IsDeferRecord?">
+      <select>
+        <case ref="DeferRecordFound" activity="Invoke Process"/>
+      </select>
+
+      <sequence name="Invoke Process">
+        <operation name="Invoke Sub-Process">
+          <participant name="FB_INVOKE_SUBPROCESS"/>
+          <output message="InvokeSubProcessServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="WFD_NAME" from="concat(&apos;FB_Deferred_Delivery_&apos;, Defer/DEFER_TYPE)"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+    <onFault>
+      <sequence name="Sequence Start">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK085</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Business Process Exception">
+          <participant name="FB_BPEXCEPTION"/>
+          <output message="BPExceptionServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="exceptionCode">Setting as HALTED</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

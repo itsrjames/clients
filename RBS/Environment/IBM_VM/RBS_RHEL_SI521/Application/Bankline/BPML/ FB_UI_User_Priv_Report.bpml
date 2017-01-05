@@ -1,0 +1,84 @@
+<process name="FB_UI_User_Priv_Report">
+  <rule name="HTMLOutput">
+    <condition>translate(output/text(), &apos;HTML&apos;, &apos;html&apos;)=&apos;html&apos;</condition>
+  </rule>
+
+  <rule name="PDFOutput">
+    <condition>translate(output/text(), &apos;PDF&apos;, &apos;pdf&apos;)=&apos;pdf&apos;</condition>
+  </rule>
+
+  <sequence name="REPORT_SEQ">
+    <operation name="LWJDBC Get Autho Data">
+      <participant name="LightweightJDBCAdapterQuery"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="pool">oraclePool</assign>
+        <assign to="query_type">SELECT</assign>
+        <assign to="result_name">result</assign>
+        <assign to="row_name">row</assign>
+        <assign to="sql">SELECT u.LOGINID &quot;USER_ID&quot;, p.FIRST_NAME &quot;FIRST_NAME&quot;, p.LAST_NAME &quot;LAST_NAME&quot;, (g.USERGROUP_NAME||&apos;(Group)&apos;) &quot;PERMISSION&quot;, u.SUPER_USER &quot;SUPER&quot;, &apos;1&apos; &quot;SEQ&quot; FROM YFS_USER u, YFS_PERSON_INFO p, YFS_USER_GROUP_LIST gl, YFS_USER_GROUP g WHERE u.BILLINGADDRESS_KEY = p.PERSON_INFO_KEY AND gl.USER_KEY = u.USER_KEY AND gl.USERGROUP_KEY = g.USERGROUP_KEY UNION SELECT u.LOGINID &quot;USER_ID&quot;, p.FIRST_NAME &quot;FIRST_NAME&quot;, p.LAST_NAME &quot;LAST_NAME&quot;, r.RESOURCE_DESC &quot;PERMISSION&quot;, u.SUPER_USER &quot;SUPER&quot;, &apos;2&apos; &quot;SEQ&quot; FROM YFS_USER u, YFS_PERSON_INFO p, YFS_RESOURCE_PERMISSION rp, YFS_RESOURCE r WHERE u.BILLINGADDRESS_KEY = p.PERSON_INFO_KEY AND rp.USER_KEY = u.USER_KEY AND rp.RESOURCE_KEY= r.RESOURCE_KEY ORDER BY 1,6,4</assign>
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <choice name="OutputType?">
+      <select>
+        <case ref="HTMLOutput" activity="HTML"/>
+        <case ref="PDFOutput" activity="PDF"/>
+      </select>
+
+      <sequence name="HTML">
+        <operation name="XSLT: Convert to HTML">
+          <participant name="XSLTService"/>
+          <output message="XSLTServiceTypeInputMessage">
+            <assign to="xml_input_from">PrimaryDoc</assign>
+            <assign to="xml_input_validation">NO</assign>
+            <assign to="xslt_name">FB_User_Privileges_HTML</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+      <sequence name="PDF">
+        <operation name="XSLT: Convert to FO">
+          <participant name="XSLTService"/>
+          <output message="XSLTServiceTypeInputMessage">
+            <assign to="xml_input_from">PrimaryDoc</assign>
+            <assign to="xml_input_validation">NO</assign>
+            <assign to="xslt_name">FB_User_Privileges_FO</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="XSLFO: Create PDF">
+          <participant name="FB_XSLFO_SG"/>
+          <output message="XSLFOInputMessage">
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </choice>
+    <operation name="Business Process Response Service Type">
+      <participant name="BusinessProcessResponseService"/>
+      <output message="BusinessProcessResponseServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+  </sequence>
+</process>

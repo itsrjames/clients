@@ -1,0 +1,657 @@
+<process name="SFG_SCT_ICFGeneration">
+  <!--<rule name="BPRestarted">
+    <condition>string-length(SFG_SCT_ICFGeneration/GetStatusRpt)&gt;0 
+and string-length(substring-after(normalize-space(SFG_SCT_ICFGeneration/GetStatusRpt/text()), &apos;restarting from id &apos;))&gt;0 
+and number(sci-get-property(&apos;sfg&apos;, &apos;SFG.TerminateAfterRestart&apos;))=1</condition>
+  </rule>-->
+
+  <rule name="MessagesToProcess">
+    <condition>number(SFG_SCT_ICFGeneration/MessagesLeft)&gt;0 and number(SFG_SCT_ICFGeneration/BundleCounter)&lt; number(sci-get-property(&apos;sct&apos;, &apos;sct.maxICFFiles&apos;))</condition>
+  </rule>
+
+  <rule name="UseRestartParams">
+    <condition>string-length(RESTART_FROM)&gt;0</condition>
+  </rule>
+
+  <rule name="SetAsHalted">
+    <condition>number(RequiresRestart)=1</condition>
+  </rule>
+  <!--
+      BUGFIX_001_BPML_IBM_RJ
+      Prevents all payments being bundled together
+  -->
+  <rule name="isENTITYNatWest">
+    <condition>boolean(string(/ProcessData/SFG_SCT_ICFGeneration/Parameters/ENTITY)='NWBKGB20' or string(/ProcessData/SFG_SCT_ICFGeneration/Parameters/ENTITY)='NWBKGB2L')</condition>
+  </rule>       
+  <sequence name="Main">
+    <sequence name="ICFGeneration">
+      <sequence name="Lock Entity">
+        <operation name="Lock Process Entity">
+          <participant name="FB_LOCK"/>
+          <output message="LockServiceTypeInputMessage">
+            <assign to="ACTION">LOCK</assign>
+            <assign to="DURATION">0</assign>
+            <assign to="LOCK_KEY" from="concat(&apos;SFG_SCT_ICFGeneration_&apos;, SFG_SCT_ICFGeneration/EntityID)"></assign>
+            <assign to="USER" from="sci-get-property(&apos;sfg&apos;, &apos;SFG.SystemUser&apos;)"></assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <onFault>
+          <sequence name="SCT06">
+            <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT06</assign>
+            <operation name="Inline Invoke Service">
+              <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+              <output message="InlineInvokeBPTypeInputMessage">
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </onFault>
+      </sequence>
+      <sequence name="Unlockable">
+        <sequence name="SubFlow A: Terminate Restarted BP">
+          <operation name="BPControl">
+                    <participant name="FB_BPCONTROL"/>
+                    <output message="BPControlInputMessage">
+                        <assign to="." from="*"/>
+                        <assign to="Action">Terminate</assign>
+                        <assign to="HaltOnError">True</assign>
+                        <assign to="WFID" from="string(RESTART_FROM)"/>
+                    </output>
+                    <input message="inmsg">
+                        <assign to="." from="*"/>
+                    </input>
+                </operation>
+        </sequence>
+        <sequence name="SubFlow B: Load Parameters">
+          <sequence name="LoadParams">
+            <operation name="LWJDBC: Load Entity record">
+              <participant name="FB_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param1" from="string(SFG_SCT_ICFGeneration/EntityID)"></assign>
+                <assign to="paramtype1">Integer</assign>
+                <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+                <assign to="query_type">SELECT</assign>
+                <assign to="result_name">result</assign>
+                <assign to="row_name">row</assign>
+                <assign to="sql">SELECT * FROM SCT_ENTITY WHERE ENTITY_ID=?</assign>
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="SFG_SCT_ICFGeneration/Parameters" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//row/*"></assign>
+              </input>
+            </operation>
+
+            <operation name="BP Metadata: get WFID">
+              <participant name="FB_BPMETADATA"/>
+              <output message="BPMetaDataServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="SFG_SCT_ICFGeneration/WFID" from="string(BPDATA/WORKFLOW_ID)"></assign>
+              </input>
+            </operation>
+
+            <choice name="IsRestarted?">
+              <select>
+                <case ref="UseRestartParams" activity="Set Restart Subset Params"/>
+                <case ref="UseRestartParams" negative="true" activity="Set Normal Subset Params"/>
+              </select>
+
+              <sequence name="Set Restart Subset Params">
+                <assign name="Assign" to="SFG_SCT_ICFGeneration/SubsetStatus">1</assign>
+                <assign name="Assign" to="SFG_SCT_ICFGeneration/SubsetWFID" from="string(RESTART_FROM)"></assign>
+              </sequence>
+              <sequence name="Set Normal Subset Params">
+                <assign name="Assign" to="SFG_SCT_ICFGeneration/SubsetStatus">0</assign>
+                <assign name="Assign" to="SFG_SCT_ICFGeneration/SubsetWFID">0</assign>
+              </sequence>
+            </choice>
+            <onFault>
+              <sequence name="SCT08">
+                <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT08</assign>
+                <operation name="Inline Invoke Service">
+                  <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+                  <output message="InlineInvokeBPTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+              </sequence>
+            </onFault>
+          </sequence>
+        </sequence>
+        <sequence name="SubFlow C: Select Subset and Create Bundle">
+          <sequence name="Select Bundle Subset">
+            <!-- CHG_CR003_OB_IBM_RJ_221112_00001_SFG_SCT_ICFGeneration_00001
+                Old
+                <assign to="sql">UPDATE SCT_PAYMENT  SET WF_ID=?, STATUS=?  WHERE PAYMENT_ID IN  (      SELECT PAYMENT_ID     FROM SCT_PAYMENT p, MBX_MESSAGE m, MBX_EXTRACTABLE x, MBX_MAILBOX b, SCT_ENTITY e      WHERE m.MESSAGE_ID = p.MESSAGE_ID      AND x.MESSAGE_ID = m.MESSAGE_ID      AND b.MAILBOX_ID = m.MAILBOX_ID      AND e.MAILBOXPATHOUT = b.PATH      AND x.EXTRACTABLE=1      AND e.ENTITY_ID=?     AND p.STATUS=?     AND NVL(WF_ID, 0)=?     AND NVL(BUNDLE_ID, 0)=0           AND      (                    (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )            OR                   (         SYSDATE&lt;TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&lt;TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )              OR                   (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND (UPPER(p.TYPE)=&apos;CAMT.029&apos; OR UPPER(p.TYPE)=&apos;CAMT.056&apos;)         )         )    )</assign>
+                <assign to="paramX" from="number(SFG_SCT_ICFGeneration/EntityID)"></assign>             
+                New
+                <assign to="sql">UPDATE SCT_PAYMENT  SET WF_ID=?, STATUS=?  WHERE PAYMENT_ID IN  (SELECT PAYMENT_ID     FROM SCT_PAYMENT p, SCT_BUNDLE b, SCT_ENTITY e      WHERE p.bundle_id = b.bundle_idAND b.entity_id = e.entity_idAND e.ENTITY_ID=?    AND p.STATUS=?     AND NVL(p.WF_ID, 0)=?     AND NVL(p.BUNDLE_ID, 0)=0           AND      (                    (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )            OR                   (         SYSDATE&lt;TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&lt;TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )              OR                   (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND (UPPER(p.TYPE)=&apos;CAMT.029&apos; OR UPPER(p.TYPE)=&apos;CAMT.056&apos;)         )         )    )</assign>
+            -->         
+            <!--
+                BUGFIX_001_BPML_IBM_RJ
+                Fix to prevent all payments being updated and bulked by updating payments where payment BIC
+                is equal to the entity
+                Old
+                <assign to="sql">UPDATE SCT_PAYMENT  SET WF_ID=?, STATUS=?  WHERE PAYMENT_ID IN  (      SELECT PAYMENT_ID     FROM SCT_PAYMENT p WHERE p.STATUS=?     AND NVL(p.WF_ID, 0)=?     AND NVL(p.BUNDLE_ID, 0)=0           AND      (                    (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )            OR                   (         SYSDATE&lt;TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&lt;TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )              OR                   (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND (UPPER(p.TYPE)=&apos;CAMT.029&apos; OR UPPER(p.TYPE)=&apos;CAMT.056&apos;)         )         )    )</assign>
+                New
+                <assign to="sql">UPDATE SCT_PAYMENT  SET WF_ID=?, STATUS=?  WHERE PAYMENT_ID IN  (      SELECT PAYMENT_ID     FROM SCT_PAYMENT p WHERE p.PAYMENT_BIC=? AND p.STATUS=?     AND NVL(p.WF_ID, 0)=?     AND NVL(p.BUNDLE_ID, 0)=0           AND      (                    (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )            OR                   (         SYSDATE&lt;TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&lt;TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )              OR                   (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND (UPPER(p.TYPE)=&apos;CAMT.029&apos; OR UPPER(p.TYPE)=&apos;CAMT.056&apos;)         )         )    )</assign>
+            -->     
+            <choice name="isNatWestChoice">
+                <select>
+                    <case ref="isENTITYNatWest" activity="NatWestSequence"/>
+                    <case ref="isENTITYNatWest" negative="true" activity="NotNatWestSequence"/>
+                </select>
+                <!-- RBS DEFECT 9
+                    *** NatWestSequence ***
+                    Old Setting
+                    <assign to="param4" from="string(/ProcessData/SFG_SCT_ICFGeneration/Parameters/ENTITY)"></assign>
+     <assign to="sql">UPDATE SCT_PAYMENT  SET WF_ID=?, STATUS=?  WHERE PAYMENT_ID IN  (      SELECT PAYMENT_ID     FROM SCT_PAYMENT p WHERE p.STATUS=? AND (p.PAYMENT_BIC='ULSBIE2D' or p.PAYMENT_BIC='ULSBIE20' or p.PAYMENT_BIC='ULSBGB20' or p.PAYMENT_BIC='ULSBGB2B') AND NVL(p.WF_ID, 0)=?     AND NVL(p.BUNDLE_ID, 0)=0           AND      (                    (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )            OR                   (         SYSDATE&lt;TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&lt;TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )              OR                   (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND (UPPER(p.TYPE)=&apos;CAMT.029&apos; OR UPPER(p.TYPE)=&apos;CAMT.056&apos;)         )         )    )</assign>
+                    New Setting
+                    <assign to="param4" from="concat('%',substring(/ProcessData/SFG_SCT_ICFGeneration/Parameters/ENTITY,1,7),'%')"></assign>
+                    <assign to="sql">UPDATE SCT_PAYMENT  SET WF_ID=?, STATUS=?  WHERE PAYMENT_ID IN  (      SELECT PAYMENT_ID     FROM SCT_PAYMENT p WHERE p.STATUS=? AND (p.PAYMENT_BIC like ? or p.PAYMENT_BIC like 'ULSBIE2%' or p.PAYMENT_BIC like 'ULSBGB2%') AND NVL(p.WF_ID, 0)=?     AND NVL(p.BUNDLE_ID, 0)=0           AND      (                    (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )            OR                   (         SYSDATE&lt;TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&lt;TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )              OR                   (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND (UPPER(p.TYPE)=&apos;CAMT.029&apos; OR UPPER(p.TYPE)=&apos;CAMT.056&apos;)         )         )    )</assign>
+                    *** NotNatWestSequence ***
+                    Old Setting
+     <assign to="param3" from="string(/ProcessData/SFG_SCT_ICFGeneration/Parameters/ENTITY)"></assign>                  
+                    <assign to="sql">UPDATE SCT_PAYMENT  SET WF_ID=?, STATUS=?  WHERE PAYMENT_ID IN  (      SELECT PAYMENT_ID     FROM SCT_PAYMENT p WHERE p.PAYMENT_BIC=? AND p.STATUS=?     AND NVL(p.WF_ID, 0)=?     AND NVL(p.BUNDLE_ID, 0)=0           AND      (                    (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )            OR                   (         SYSDATE&lt;TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&lt;TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )              OR                   (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND (UPPER(p.TYPE)=&apos;CAMT.029&apos; OR UPPER(p.TYPE)=&apos;CAMT.056&apos;)         )         )    )</assign>                   
+                    New Setting
+                    <assign to="param3" from="concat('%',substring(/ProcessData/SFG_SCT_ICFGeneration/Parameters/ENTITY,1,7),'%')"></assign>
+                    <assign to="sql">UPDATE SCT_PAYMENT  SET WF_ID=?, STATUS=?  WHERE PAYMENT_ID IN  (      SELECT PAYMENT_ID     FROM SCT_PAYMENT p WHERE p.PAYMENT_BIC like ? AND p.STATUS=?     AND NVL(p.WF_ID, 0)=?     AND NVL(p.BUNDLE_ID, 0)=0           AND      (                    (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )            OR                   (         SYSDATE&lt;TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&lt;TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )              OR                   (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND (UPPER(p.TYPE)=&apos;CAMT.029&apos; OR UPPER(p.TYPE)=&apos;CAMT.056&apos;)         )         )    )</assign>                  
+                -->                                   
+				<!-- RBS_DEFECT_27
+					Old
+					string(/ProcessData/SFG_SCT_ICFGeneration/Parameters/ENTITY)
+					New
+					concat('%',substring(/ProcessData/SFG_SCT_ICFGeneration/Parameters/ENTITY,1,7),'%')
+				-->                      
+                <sequence name="NatWestSequence">
+                    <operation name="LWJDBC: Update Payment with WF_ID and Status (1)">
+                      <participant name="FB_LWJDBC"/>
+                      <output message="LightweightJDBCAdapterTypeInputMessage">
+                        <assign to="param1" from="string(SFG_SCT_ICFGeneration/WFID)"></assign>
+                        <assign to="param2">1</assign>
+                        <assign to="param3" from="string(SFG_SCT_ICFGeneration/SubsetStatus)"></assign>
+                        <assign to="param4" from="concat('%',substring(/ProcessData/SFG_SCT_ICFGeneration/Parameters/ENTITY,1,7),'%')"></assign>                         
+                        <assign to="param5" from="string(SFG_SCT_ICFGeneration/SubsetWFID)"></assign>
+                        <assign to="param6" from="sci-get-property(&apos;sct&apos;, &apos;sct.rulebook.change.effectivedate&apos;)"></assign>
+                        <assign to="param7" from="sci-get-property(&apos;sct&apos;, &apos;sct.rulebook.change.settledate&apos;)"></assign>
+                        <assign to="param8" from="sci-get-property(&apos;sct&apos;, &apos;sct.rulebook.change.effectivedate&apos;)"></assign>
+                        <assign to="param9" from="sci-get-property(&apos;sct&apos;, &apos;sct.rulebook.change.settledate&apos;)"></assign>
+                        <assign to="param10" from="sci-get-property(&apos;sct&apos;, &apos;sct.rulebook.change.effectivedate&apos;)"></assign>                
+                        <assign to="paramtype1">Integer</assign>
+                        <assign to="paramtype2">Integer</assign>
+                        <assign to="paramtype3">Integer</assign>                          
+                        <assign to="paramtype4">String</assign>
+                        <assign to="paramtype5">Integer</assign>
+                        <assign to="paramtype6">String</assign>
+                        <assign to="paramtype7">String</assign>
+                        <assign to="paramtype8">String</assign>
+                        <assign to="paramtype9">String</assign>
+                        <assign to="paramtype10">String</assign>
+                        <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+                        <assign to="query_type">UPDATE</assign>
+                        <assign to="result_name">result</assign>
+                        <assign to="row_name">row</assign>  
+                        <assign to="sql">UPDATE SCT_PAYMENT  SET WF_ID=?, STATUS=?  WHERE PAYMENT_ID IN  (      SELECT PAYMENT_ID     FROM SCT_PAYMENT p WHERE p.STATUS=? AND (p.PAYMENT_BIC like ? or p.PAYMENT_BIC like 'ULSBIE2%' or p.PAYMENT_BIC like 'ULSBGB2%') AND NVL(p.WF_ID, 0)=?     AND NVL(p.BUNDLE_ID, 0)=0           AND      (                    (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )            OR                   (         SYSDATE&lt;TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&lt;TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )              OR                   (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND (UPPER(p.TYPE)=&apos;CAMT.029&apos; OR UPPER(p.TYPE)=&apos;CAMT.056&apos;)         )         )    )</assign>
+                        <assign to="." from="*"></assign>
+                      </output>
+                      <input message="inmsg">
+                      </input>
+                    </operation>                    
+                </sequence>
+                <sequence name="NotNatWestSequence">
+                    <operation name="LWJDBC: Update Payment with WF_ID and Status (1)">
+                      <participant name="FB_LWJDBC"/>
+                      <output message="LightweightJDBCAdapterTypeInputMessage">
+                        <assign to="param1" from="string(SFG_SCT_ICFGeneration/WFID)"></assign>
+                        <assign to="param2">1</assign>  
+                        <assign to="param3" from="concat('%',substring(/ProcessData/SFG_SCT_ICFGeneration/Parameters/ENTITY,1,7),'%')"></assign>
+                        <assign to="param4" from="string(SFG_SCT_ICFGeneration/SubsetStatus)"></assign>
+                        <assign to="param5" from="string(SFG_SCT_ICFGeneration/SubsetWFID)"></assign>
+                        <assign to="param6" from="sci-get-property(&apos;sct&apos;, &apos;sct.rulebook.change.effectivedate&apos;)"></assign>
+                        <assign to="param7" from="sci-get-property(&apos;sct&apos;, &apos;sct.rulebook.change.settledate&apos;)"></assign>
+                        <assign to="param8" from="sci-get-property(&apos;sct&apos;, &apos;sct.rulebook.change.effectivedate&apos;)"></assign>
+                        <assign to="param9" from="sci-get-property(&apos;sct&apos;, &apos;sct.rulebook.change.settledate&apos;)"></assign>
+                        <assign to="param10" from="sci-get-property(&apos;sct&apos;, &apos;sct.rulebook.change.effectivedate&apos;)"></assign>                
+                        <assign to="paramtype1">Integer</assign>
+                        <assign to="paramtype2">Integer</assign>
+                        <assign to="paramtype3">String</assign>
+                        <assign to="paramtype4">Integer</assign>
+                        <assign to="paramtype5">Integer</assign>
+                        <assign to="paramtype6">String</assign>
+                        <assign to="paramtype7">String</assign>
+                        <assign to="paramtype8">String</assign>
+                        <assign to="paramtype9">String</assign>
+                        <assign to="paramtype10">String</assign>
+                        <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+                        <assign to="query_type">UPDATE</assign>
+                        <assign to="result_name">result</assign>
+                        <assign to="row_name">row</assign>
+                        <assign to="sql">UPDATE SCT_PAYMENT  SET WF_ID=?, STATUS=?  WHERE PAYMENT_ID IN  (      SELECT PAYMENT_ID     FROM SCT_PAYMENT p WHERE p.PAYMENT_BIC like ? AND p.STATUS=?     AND NVL(p.WF_ID, 0)=?     AND NVL(p.BUNDLE_ID, 0)=0           AND      (                    (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )            OR                   (         SYSDATE&lt;TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND P.SETTLE_DATE&lt;TO_DATE(?, &apos;yyyy-MM-dd&apos;)         AND (UPPER(p.TYPE)=&apos;PACS.004&apos; OR UPPER(p.TYPE)=&apos;PACS.008&apos;)         )              OR                   (         SYSDATE&gt;=TO_DATE(?, &apos;yyyy-MM-dd HH24:mi:ss&apos;)                  AND (UPPER(p.TYPE)=&apos;CAMT.029&apos; OR UPPER(p.TYPE)=&apos;CAMT.056&apos;)         )         )    )</assign>
+                        <assign to="." from="*"></assign>
+                      </output>
+                      <input message="inmsg">
+                      </input>
+                    </operation>                    
+                </sequence>
+            </choice>                                                       
+
+
+            <assign name="Assign" to="SFG_SCT_ICFGeneration/BundleCounter">0</assign>
+            <sequence name="Create ICF">
+              <operation name="Release Messages Left">
+                <participant name="FB_RELEASE"/>
+                <output message="ReleaseServiceTypeInputMessage">
+                  <assign to="TARGET">SFG_SCT_ICFGeneration/MessagesLeft</assign>
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+              <operation name="LWJDBC: Select messages remaining for WFID">
+                <participant name="FB_LWJDBC"/>
+                <output message="LightweightJDBCAdapterTypeInputMessage">
+                  <assign to="param1" from="string(SFG_SCT_ICFGeneration/WFID)"></assign>
+                  <assign to="param2">1</assign>
+                  <assign to="paramtype1">Integer</assign>
+                  <assign to="paramtype2">Integer</assign>
+                  <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+                  <assign to="query_type">SELECT</assign>
+                  <assign to="result_name">result</assign>
+                  <assign to="row_name">row</assign>
+                  <assign to="sql">SELECT count(*) MESSAGE_COUNT FROM SCT_PAYMENT s WHERE s.WF_ID=? AND STATUS=? AND NVL(BUNDLE_ID, 0)=0</assign>
+                  <assign to="." from="*"></assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="SFG_SCT_ICFGeneration/MessagesLeft" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//row/MESSAGE_COUNT)"></assign>
+                </input>
+              </operation>
+
+              <choice name="IsMessages?">
+                <select>
+                  <case ref="MessagesToProcess" activity="Get Remaining Payments"/>
+                </select>
+
+                <sequence name="Get Remaining Payments">
+                  <assign name="Assign" to="SFG_SCT_ICFGeneration/BundleCounter" from="number(SFG_SCT_ICFGeneration/BundleCounter)+1"></assign>
+                  <sequence name="SubFlow C1: Create Bundle">
+                    <sequence name="BundleCreation">
+                      <sequence name="IdentifyBundle">
+                        <operation name="Begin Transaction Service">
+                          <participant name="BeginTransactionService"/>
+                          <output message="BeginTransactionServiceTypeInputMessage">
+                            <assign to="DISTRIBUTED">TRUE</assign>
+                            <assign to="ON_FAULT">ROLLBACK</assign>
+                            <assign to="START_TRANSACTION">TRUE</assign>
+                            <assign to="." from="*"></assign>
+                          </output>
+                          <input message="inmsg">
+                            <assign to="." from="*"></assign>
+                          </input>
+                        </operation>
+                        
+                        <operation name="JDBC: Get Bundle ID">
+                                  <participant name="FB_LWJDBC"/>
+                                  <output message="LightweightJDBCAdapterTypeInputMessage">
+                                    <assign to="." from="*"></assign>
+                                    <assign to="sql">SELECT SCT_BUNDLE_IDSEQ.NEXTVAL  FROM DUAL</assign>
+                                  </output>
+                                  <input message="inmsg">
+                                    <assign to="SFG_SCT_ICFGeneration/BundleID" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//NEXTVAL)"></assign>
+                                  </input>
+                                </operation>
+
+                        <operation name="LWJDBC: Create Bundle Record for Type subset (1)">
+                          <participant name="FB_LWJDBC_TRANS"/>
+                          <output message="LightweightJDBCAdapterTypeInputMessage">
+                            <!--<assign to="param1">iBUNDLE_ID</assign>-->
+                                    <assign to="param1" from="number(SFG_SCT_ICFGeneration/BundleID)"/>
+                            <assign to="param10">0</assign>
+                            <assign to="param11">SCT</assign>
+                            <assign to="param2" from="concat(&apos;BundlePrep_&apos;,SFG_SCT_ICFGeneration/WFID, &apos;_&apos;, SFG_SCT_ICFGeneration/BundleCounter)"></assign>
+                            <assign to="param3" from="concat(&apos;&apos;, &apos;&apos;)"></assign>
+                            <assign to="param4">ICF</assign>
+                            <assign to="param5" from="number(SFG_SCT_ICFGeneration/EntityID)"></assign>
+                            <assign to="param6">1</assign>
+                            <assign to="param7" from="concat(&apos;&apos;, &apos;&apos;)"></assign>
+                            <assign to="param8" from="string(SFG_SCT_ICFGeneration/WFID)"></assign>
+                            <assign to="param9">1</assign>
+                            <assign to="paramtype1">Integer</assign>
+                            <assign to="paramtype10">Integer</assign>
+                            <assign to="paramtype11">String</assign>
+                            <assign to="paramtype2">String</assign>
+                            <assign to="paramtype3">String</assign>
+                            <assign to="paramtype4">String</assign>
+                            <assign to="paramtype5">Integer</assign>
+                            <assign to="paramtype6">Integer</assign>
+                            <assign to="paramtype7">String</assign>
+                            <assign to="paramtype8">Integer</assign>
+                            <assign to="paramtype9">Integer</assign>
+                            <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+                            <assign to="query_type">INSERT</assign>
+                            <assign to="result_name">result</assign>
+                            <assign to="row_name">row</assign>
+                            <!--<assign to="sql">CALL SCT_BUNDLE_NEWINSERT (?, ?, ?, SYSDATE, ?, ?, ?, ?, ?, ?,?)</assign>-->
+                            <assign to="sql">INSERT INTO SCT_BUNDLE(BUNDLE_ID,FILENAME,REFERENCE,BTIMESTAMP,BTYPE,ENTITY_ID,STATUS,ERROR,WF_ID,ISOUTBOUND,ISOVERRIDE,SERVICE) VALUES (?,?,?,SYSDATE,?,?,?,?,?,?,?,?)</assign>
+                            <assign to="." from="*"></assign>
+                          </output>
+                          <input message="inmsg">
+                            <!--<assign to="SFG_SCT_ICFGeneration/BundleID" from="DocToDOM(PrimaryDocument, &apos;false&apos;)//row/ReturnValue/text()"></assign>-->
+                          </input>
+                        </operation>
+
+                        <operation name="LWJDBC: Update Payment with BUNDLE_ID, Status(2)">
+                          <participant name="FB_LWJDBC_TRANS"/>
+                          <output message="LightweightJDBCAdapterTypeInputMessage">
+                            <assign to="param1" from="number(SFG_SCT_ICFGeneration/BundleID)"></assign>
+                            <assign to="param10" from="number(SFG_SCT_ICFGeneration/Parameters/MAXBULKSPERFILE)+1"></assign>
+                            <assign to="param11" from="SFG_SCT_ICFGeneration/WFID/text()"></assign>
+                            <assign to="param12">1</assign>
+                            <assign to="param13" from="number(SFG_SCT_ICFGeneration/Parameters/MAXTRANSPERBULK)*number(SFG_SCT_ICFGeneration/Parameters/MAXBULKSPERFILE)+1"></assign>
+                            <assign to="param2">2</assign>
+                            <assign to="param3" from="string(SFG_SCT_ICFGeneration/WFID)"></assign>
+                            <assign to="param4">1</assign>
+                            <assign to="param5" from="number(SFG_SCT_ICFGeneration/Parameters/MAXTRANSPERBULK)*number(SFG_SCT_ICFGeneration/Parameters/MAXBULKSPERFILE)+1"></assign>
+                            <assign to="param6" from="number(SFG_SCT_ICFGeneration/Parameters/MAXBULKSPERFILE)+1"></assign>
+                            <assign to="param7" from="string(SFG_SCT_ICFGeneration/WFID)"></assign>
+                            <assign to="param8">1</assign>
+                            <assign to="param9" from="number(SFG_SCT_ICFGeneration/Parameters/MAXTRANSPERBULK)*number(SFG_SCT_ICFGeneration/Parameters/MAXBULKSPERFILE)+1"></assign>
+                            <assign to="paramtype1">Integer</assign>
+                            <assign to="paramtype10">Integer</assign>
+                            <assign to="paramtype11">Integer</assign>
+                            <assign to="paramtype12">Integer</assign>
+                            <assign to="paramtype13">Integer</assign>
+                            <assign to="paramtype2">Integer</assign>
+                            <assign to="paramtype3">Integer</assign>
+                            <assign to="paramtype4">Integer</assign>
+                            <assign to="paramtype5">Integer</assign>
+                            <assign to="paramtype6">Integer</assign>
+                            <assign to="paramtype7">Integer</assign>
+                            <assign to="paramtype8">Integer</assign>
+                            <assign to="paramtype9">Integer</assign>
+                            <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+                            <assign to="query_type">UPDATE</assign>
+                            <assign to="result_name">result</assign>
+                            <assign to="row_name">row</assign>
+                            <assign to="sql">UPDATE SCT_PAYMENT   SET BUNDLE_ID = ?, STATUS=?   WHERE PAYMENT_ID IN  (     SELECT PAYMENT_ID     FROM (          SELECT PAYMENT_ID, SETTLE_DATE, TYPE         FROM SCT_PAYMENT        WHERE SETTLE_DATE IN (             SELECT SETTLE_DATE          FROM (                  SELECT SETTLE_DATE, TYPE               FROM (                     SELECT SETTLE_DATE, TYPE                FROM (                    SELECT SETTLE_DATE, TYPE                 FROM SCT_PAYMENT s                 WHERE s.WF_ID=?                AND s.STATUS=?                ORDER BY SETTLE_DATE ASC              )              WHERE ROWNUM &lt; ?  /*BULKS*TRANSPERBULK+1*/       )            GROUP BY SETTLE_DATE, TYPE            ORDER BY SETTLE_DATE, TYPE ASC        )        WHERE ROWNUM &lt; ? /*MAX NUMBER OF BULKS*/    )      AND TYPE IN (        SELECT TYPE        FROM (              SELECT TYPE              FROM (                   SELECT SETTLE_DATE, TYPE               FROM (                     SELECT SETTLE_DATE, TYPE                     FROM SCT_PAYMENT s                     WHERE s.WF_ID=?                  AND s.STATUS=?                   ORDER BY SETTLE_DATE ASC                 )                WHERE ROWNUM &lt; ? /*BULKS*TRANSPERBULK+1*/      )           GROUP BY SETTLE_DATE, TYPE           ORDER BY SETTLE_DATE, TYPE ASC        )        WHERE ROWNUM &lt; ?   /*MAX NUMBER OF BULKS*/    )      AND WF_ID=?           AND STATUS=?      ORDER BY SETTLE_DATE, TYPE, PAYMENT_ID ASC    )    WHERE ROWNUM &lt; ? /*BULKS*TRANSPERBULK+1*/  )</assign>
+                            <assign to="." from="*"></assign>
+                          </output>
+                          <input message="inmsg">
+                          </input>
+                        </operation>
+
+                        <assign name="Assign" to="message_to_child/SFG_SCT_ICFFile" from="SFG_SCT_ICFGeneration/*[local-name()=&apos;Parameters&apos; or local-name()=&apos;EntityID&apos; or local-name()=&apos;BundleID&apos; or local-name()=&apos;SubsetCount&apos;]"></assign>
+                        <operation name="End Transaction Service">
+                          <participant name="EndTransactionService"/>
+                          <output message="EndTransactionServiceTypeInputMessage">
+                            <assign to="END_TRANSACTION">TRUE</assign>
+                            <assign to="ROLLBACK_TRANSACTION">FALSE</assign>
+                            <assign to="." from="*"></assign>
+                          </output>
+                          <input message="inmsg">
+                            <assign to="." from="*"></assign>
+                          </input>
+                        </operation>
+
+                        <sequence name="Invoke ICFFile">
+                          <operation name="Invoke ICFFile Process">
+                            <participant name="FB_INVOKE_SUBPROCESS"/>
+                            <output message="InvokeSubProcessServiceTypeInputMessage">
+                              <assign to="INVOKE_MODE" from="sci-get-property(&apos;sct&apos;, &apos;sct.icf.FileInvokeMode&apos;)"></assign>
+                              <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+                              <assign to="WFD_NAME">SFG_SCT_ICFFile</assign>
+                              <assign to="." from="*"></assign>
+                            </output>
+                            <input message="inmsg">
+                              <assign to="." from="*"></assign>
+                            </input>
+                          </operation>
+
+                          <onFault>
+                            <sequence name="Rollback Bundle Assign">
+                              <operation name="LWJDBC: Update Payment with Status(1), BundleID(NULL)">
+                                <participant name="FB_LWJDBC"/>
+                                <output message="LightweightJDBCAdapterTypeInputMessage">
+                                  <assign to="param1">1</assign>
+                                  <assign to="param2" from="number(SFG_SCT_ICFGeneration/BundleID)"></assign>
+                                  <assign to="paramtype1">Integer</assign>
+                                  <assign to="paramtype2">Integer</assign>
+                                  <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+                                  <assign to="query_type">UPDATE</assign>
+                                  <assign to="result_name">result</assign>
+                                  <assign to="row_name">row</assign>
+                                  <assign to="sql">UPDATE SCT_PAYMENT  SET STATUS=?, BUNDLE_ID=NULL WHERE BUNDLE_ID=?</assign>
+                                  <assign to="." from="*"></assign>
+                                </output>
+                                <input message="inmsg">
+                                </input>
+                              </operation>
+
+                              <operation name="Business Process Exception">
+                                <participant name="FB_BPEXCEPTION"/>
+                                <output message="BPExceptionServiceTypeInputMessage">
+                                  <assign to="exceptionCode">Error invoking SFG_SCT_ICFFILE</assign>
+                                  <assign to="." from="*"></assign>
+                                </output>
+                                <input message="inmsg">
+                                  <assign to="." from="*"></assign>
+                                </input>
+                              </operation>
+
+                            </sequence>
+                          </onFault>
+                        </sequence>
+                        <operation name="Release Bundle ID">
+                          <participant name="FB_RELEASE"/>
+                          <output message="ReleaseServiceTypeInputMessage">
+                            <assign to="TARGET">SFG_SCT_ICFGeneration/BundleID</assign>
+                            <assign to="." from="*"></assign>
+                          </output>
+                          <input message="inmsg">
+                            <assign to="." from="*"></assign>
+                          </input>
+                        </operation>
+
+                        <onFault>
+                          <sequence name="SCT11">
+                            <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT11</assign>
+                            <operation name="Inline Invoke Service">
+                              <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+                              <output message="InlineInvokeBPTypeInputMessage">
+                                <assign to="." from="*"></assign>
+                              </output>
+                              <input message="inmsg">
+                                <assign to="." from="*"></assign>
+                              </input>
+                            </operation>
+
+                          </sequence>
+                        </onFault>
+                      </sequence>
+                      <onFault>
+                        <sequence name="BundleError">
+                          <assign name="Assign" to="RequiresRestart">1</assign>
+                          <operation name="LWJDBC: Update Bundle in Error (-1)">
+                            <participant name="FB_LWJDBC"/>
+                            <output message="LightweightJDBCAdapterTypeInputMessage">
+                              <assign to="param1">-1</assign>
+                              <assign to="param2" from="string(SFG_ThrowError/ErrorCode[1])"></assign>
+                              <assign to="param3" from="number(SFG_SCT_ICFGeneration/BundleID)"></assign>
+                              <assign to="paramtype1">Integer</assign>
+                              <assign to="paramtype2">String</assign>
+                              <assign to="paramtype3">Integer</assign>
+                              <!--<assign to="pool" from="sci-get-property(&apos;sct&apos;, &apos;sct.dbPool&apos;)"></assign>-->
+                              <assign to="query_type">UPDATE</assign>
+                              <assign to="result_name">result</assign>
+                              <assign to="row_name">row</assign>
+                              <assign to="sql">UPDATE SCT_BUNDLE SET STATUS = ?, ERROR=? WHERE BUNDLE_ID=?</assign>
+                              <assign to="." from="*"></assign>
+                            </output>
+                            <input message="inmsg">
+                              <assign to="." from="*"></assign>
+                            </input>
+                          </operation>
+
+                          <operation name="Business Process Exception">
+                            <participant name="FB_BPEXCEPTION"/>
+                            <output message="BPExceptionServiceTypeInputMessage">
+                              <assign to="." from="*"></assign>
+                            </output>
+                            <input message="inmsg">
+                              <assign to="." from="*"></assign>
+                            </input>
+                          </operation>
+
+                        </sequence>
+                      </onFault>
+                    </sequence>
+                  </sequence>
+                  <repeat name="Return to Create ICF" ref="Create ICF"/>
+
+                </sequence>
+              </choice>
+              <onFault>
+                <sequence name="SCT10">
+                  <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT10</assign>
+                  <operation name="Inline Invoke Service">
+                    <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+                    <output message="InlineInvokeBPTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </onFault>
+            </sequence>
+            <assign name="Assign" to="RequiresRestart">0</assign>
+            <onFault>
+              <sequence name="SCT09">
+                <assign name="Assign" to="RequiresRestart">1</assign>
+                <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT09</assign>
+                <operation name="Inline Invoke Service">
+                  <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+                  <output message="InlineInvokeBPTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+              </sequence>
+            </onFault>
+          </sequence>
+        </sequence>
+        <operation name="Unlock Process">
+          <participant name="FB_LOCK"/>
+          <output message="LockServiceTypeInputMessage">
+            <assign to="ACTION">UNLOCK</assign>
+            <assign to="DURATION">0</assign>
+            <assign to="LOCK_KEY" from="concat(&apos;SFG_SCT_ICFGeneration_&apos;, SFG_SCT_ICFGeneration/EntityID)"></assign>
+            <assign to="USER" from="sci-get-property(&apos;sfg&apos;, &apos;SFG.SystemUser&apos;)"></assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <onFault>
+          <sequence name="Unlock">
+            <operation name="Unlock Process">
+              <participant name="FB_LOCK"/>
+              <output message="LockServiceTypeInputMessage">
+                <assign to="ACTION">UNLOCK</assign>
+                <assign to="DURATION">0</assign>
+                <assign to="LOCK_KEY" from="concat(&apos;SFG_SCT_ICFGeneration_&apos;, SFG_SCT_ICFGeneration/EntityID)"></assign>
+                <assign to="USER" from="sci-get-property(&apos;sfg&apos;, &apos;SFG.SystemUser&apos;)"></assign>
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </onFault>
+      </sequence>
+      <onFault>
+        <sequence name="SCT05">
+          <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">SCT05</assign>
+          <operation name="Inline Invoke Service">
+            <participant name="SFG_THROW_ERROR_INLINE_SG"/>
+            <output message="InlineInvokeBPTypeInputMessage">
+              <assign to="." from="*"></assign>
+            </output>
+            <input message="inmsg">
+              <assign to="." from="*"></assign>
+            </input>
+          </operation>
+
+        </sequence>
+      </onFault>
+    </sequence>
+    <onFault>
+      <sequence name="HandleError">
+        <operation name="Release Service">
+          <participant name="FB_RELEASE"/>
+          <output message="ReleaseServiceTypeInputMessage">
+            <assign to="TARGET">SFG_SCT_ICFGeneration</assign>
+            <assign to="." from="*"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <choice name="SetAsHalted?">
+          <select>
+            <case ref="SetAsHalted" activity="Halt"/>
+          </select>
+
+          <sequence name="Halt">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="exceptionCode">Marking process as halted</assign>
+                <assign to="." from="*"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

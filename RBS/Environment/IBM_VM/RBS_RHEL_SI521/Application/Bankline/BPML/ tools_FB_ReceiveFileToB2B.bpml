@@ -1,0 +1,36 @@
+<process name="tools_FB_ReceiveFileToB2B">
+  <sequence name="Sequence Start">
+    <operation name="Lightweight JDBC Adapter">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1" from="string(MQ/correlationId)"></assign>
+        <assign to="param2">B2B</assign>
+        <assign to="param3">FB</assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="sql">SELECT FILENAME FROM TOOLS_FB_MQ_FILE_TRANSFER WHERE CORRELATION_ID=? AND CONSUMER=? AND PRODUCER=?</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="Filename" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/FILENAME/text()"></assign>
+      </input>
+    </operation>
+
+    <operation name="File System Adapter">
+      <participant name="E5FileSystem"/>
+      <output message="FileSystemInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="Action">FS_EXTRACT</assign>
+        <assign to="appendOnExtract">false</assign>
+        <assign to="assignedFilename" from="string(Filename)"></assign>
+        <assign to="assignFilename">true</assign>
+        <assign to="extractionFolder">/opt/mefg/GPLDump/B2B</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+  </sequence>
+</process>

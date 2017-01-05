@@ -1,0 +1,92 @@
+############################################################################
+# Licensed Materials - Property of IBM
+#
+# (C) Copyright IBM Corp. 2007, 2011 All Rights Reserved.
+#
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+############################################################################
+## PROPERTY_FILE_NAME
+## jgroups_cluster.properties.in (for initialization)
+## jgroups_cluster.properties (for operations)
+## PROPERTY_FILE_DESCRIPTION
+## 
+
+## PROPERTY_START
+## PROPERTY_NAME: group_name 
+## PROPERTY_TYPE: String
+## PROPERTY_DESCRIPTION
+## The group name for a cluster node. All nodes in a cluster must have the same group name. 
+## Default: Sterling_NodeInfo_group 
+group_name=Sterling_NodeInfo_group
+## PROPERTY_END
+
+## PROPERTY_START
+## PROPERTY_NAME: debug
+## PROPERTY_TYPE: Boolean
+## PROPERTY_DESCRIPTION
+## Level of logged debug information. 
+## Valid values:
+## true :  Provides more debug information in the log for troubleshooting. 
+## false : (default)
+debug=false
+## PROPERTY_END
+
+## PROPERTY_START
+## PROPERTY_NAME: property_string
+## PROPERTY_TYPE: String
+## PROPERTY_DESCRIPTION
+## UDP or TCP multicast configuration string; stack property value for JGroups 
+## NotificationBus communication. 
+## For UDP, if you have two nodes on same box or using different base port,
+## you need to make sure that the mcast_port is set to be the same.
+## For TCP, you need to list all nodes addresses (host_addr[port]) in the 
+## cluster in the TCPPING initial_hosts list. For example: if you have two nodes, 
+## node1 on host1 start_port=port1, node2 on host2 start_port=port2
+## then TCPPING initial_hosts=host1[port1],host2[port2].
+## UDP string is default.
+
+#:ifdef IPV4STACK
+      #:if IPV4STACK false
+property_string=UDP(bind_addr=&HOST_ADDR;;bind_port=&MULTICAST_NODE_PORT2;;mcast_addr=FFFF::239.255.166.17;mcast_port=&MULTICAST_NODE_PORT1;;ip_ttl=32;mcast_send_buf_size=150000;mcast_recv_buf_size=80000):PING(timeout=2000;num_initial_members=3):MERGE2(min_interval=5000;max_interval=10000):FD_SOCK:VERIFY_SUSPECT(timeout=1500):pbcast.NAKACK(gc_lag=50;retransmit_timeout=300,600,1200,2400,4800;discard_delivered_msgs=true):UNICAST(timeout=5000):pbcast.STABLE(desired_avg_gossip=20000):FRAG(frag_size=8096;down_thread=false;up_thread=false):pbcast.GMS(join_timeout=5000;join_retry_timeout=2000;shun=false;print_local_addr=true)
+       #:else
+property_string=UDP(bind_addr=&HOST_ADDR;;bind_port=&MULTICAST_NODE_PORT2;;mcast_addr=239.255.166.17;mcast_port=&MULTICAST_NODE_PORT1;;ip_ttl=32;mcast_send_buf_size=150000;mcast_recv_buf_size=80000):PING(timeout=2000;num_initial_members=3):MERGE2(min_interval=5000;max_interval=10000):FD_SOCK:VERIFY_SUSPECT(timeout=1500):pbcast.NAKACK(gc_lag=50;retransmit_timeout=300,600,1200,2400,4800;discard_delivered_msgs=true):UNICAST(timeout=5000):pbcast.STABLE(desired_avg_gossip=20000):FRAG(frag_size=8096;down_thread=false;up_thread=false):pbcast.GMS(join_timeout=5000;join_retry_timeout=2000;shun=false;print_local_addr=true)
+      #:endif
+#:else
+#property_string=UDP(bind_addr=&HOST_ADDR;;bind_port=&MULTICAST_NODE_PORT2;;mcast_addr=239.255.166.17;mcast_port=&MULTICAST_NODE_PORT1;;ip_ttl=32;mcast_send_buf_size=150000;mcast_recv_buf_size=80000):PING(timeout=2000;num_initial_members=3):MERGE2(min_interval=5000;max_interval=10000):FD_SOCK:VERIFY_SUSPECT(timeout=1500):pbcast.NAKACK(gc_lag=50;retransmit_timeout=300,600,1200,2400,4800;discard_delivered_msgs=true):UNICAST(timeout=5000):pbcast.STABLE(desired_avg_gossip=20000):FRAG(frag_size=8096;down_thread=false;up_thread=false):pbcast.GMS(join_timeout=5000;join_retry_timeout=2000;shun=false;print_local_addr=true)
+#:endif
+property_string=TCP(bind_addr=&HOST_ADDR;;start_port=&MULTICAST_NODE_PORT2;):TCPPING(initial_hosts=&HOST_ADDR;[&MULTICAST_NODE_PORT2;],node2HostAddr[node2StartPort];port_range=1;timeout=5000;num_initial_members=2;up_thread=true;down_thread=true):MERGE2(min_interval=3000;max_interval=5000):FD_SOCK:FD(timeout=5000;max_tries=48;):VERIFY_SUSPECT(timeout=1500;down_thread=false;up_thread=false):pbcast.NAKACK(max_xmit_size=60000;gc_lag=50;retransmit_timeout=100,200,300,600,1200,2400,4800;discard_delivered_msgs=true):pbcast.STABLE(stability_delay=1000;desired_avg_gossip=20000;down_thread=false;up_thread=false;max_bytes=0):VIEW_SYNC(avg_send_interval=60000;down_thread=false;up_thread=false):pbcast.GMS(print_local_addr=true;join_timeout=5000;join_retry_timeout=2000;shun=false;up_thread=true;down_thread=true)
+## PROPERTY_END
+
+## PROPERTY_START
+## PROPERTY_NAME: MaxNodeCommunicationInfoInterval
+## PROPERTY_TYPE: Integer
+## PROPERTY_DESCRIPTION
+## NodeInfo multicast interval in seconds.
+## Default value : 10
+MaxNodeCommunicationInfoInterval=10
+## PROPERTY_END
+
+## PROPERTY_START
+## PROPERTY_NAME: jgroups.bind_addr
+## PROPERTY_TYPE: String
+## PROPERTY_DESCRIPTION
+## Bind address for JGroups Notification communication. 
+jgroups.bind_addr=&HOST_ADDR;
+## PROPERTY_END
+
+## PROPERTY_START
+## PROPERTY_NAME: distribution_property_string
+## PROPERTY_TYPE: String
+## PROPERTY_DESCRIPTION
+## Communication stack property for job distribution (load balance). 
+distribution_property_string=TCP(start_port=&MULTICAST_NODE_PORT1;):TCPPING(initial_hosts=&HOST_NAME;[&MULTICAST_NODE_PORT1;];port_range=1;timeout=5000;num_initial_members=2;up_thread=true;down_thread=true):MERGE2(min_interval=3000;max_interval=5000):FD_SOCK:FD(timeout=5000;max_tries=48;):VERIFY_SUSPECT(timeout=1500):pbcast.NAKACK(down_thread=true;up_thread=true;gc_lag=100;retransmit_timeout=3000;discard_delivered_msgs=true):pbcast.STABLE(stability_delay=1000;desired_avg_gossip=20000;down_thread=false;up_thread=false;max_bytes=0):pbcast.GMS(join_timeout=5000;join_retry_timeout=2000;shun=false;print_local_addr=true;down_thread=true;up_thread=true)
+## PROPERTY_END
+
+## PROPERTY_START
+## PROPERTY_NAME: lock.protocolStack
+## PROPERTY_TYPE: String
+## PROPERTY_DESCRIPTION
+##
+lock.protocolStack=UDP(bind_addr=&HOST_ADDR;;bind_port=&MULTICAST_NODE_PORT3;;mcast_addr=239.255.166.17;mcast_port=&MULTICAST_NODE_PORT10;;ip_ttl=32;mcast_send_buf_size=150000;mcast_recv_buf_size=80000):PING(timeout=2000;num_initial_members=3):MERGE2(min_interval=5000;max_interval=10000):FD_SOCK:VERIFY_SUSPECT(timeout=1500):pbcast.NAKACK(gc_lag=50;retransmit_timeout=300,600,1200,2400,4800):UNICAST(timeout=5000):pbcast.STABLE(desired_avg_gossip=20000):FRAG(frag_size=8096;down_thread=false;up_thread=false):pbcast.GMS(join_timeout=5000;join_retry_timeout=2000;shun=false;print_local_addr=true) 
+## PROPERTY_END

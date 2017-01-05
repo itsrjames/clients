@@ -1,0 +1,515 @@
+<process name="FB_DLK_Outbound_File">
+  <rule name="InactiveCustomer">
+    <condition>translate(Datalink/Status, &apos;act&apos;, &apos;ACT&apos;)!=&apos;ACT&apos;</condition>
+  </rule>
+
+  <rule name="StartDateNotReached">
+    <condition>number(Datalink/StartDue)&gt;0</condition>
+  </rule>
+
+  <rule name="EndDateReached">
+    <condition>number(Datalink/EndDue)&lt;0</condition>
+  </rule>
+
+  <rule name="GZIP">
+    <condition>number(Datalink/Compression)=3</condition>
+  </rule>
+
+  <rule name="ZIP">
+    <condition>number(Datalink/Compression)=2</condition>
+  </rule>
+
+  <rule name="NoCompression">
+    <condition>number(Datalink/Compression)!=2 and number(Datalink/Compression)!=3</condition>
+  </rule>
+
+  <rule name="SMIME">
+    <condition>string(Datalink/DSigFormat)=&apos;2&apos;
+or
+string(Datalink/DSigFormat)=&apos;3&apos;
+or
+string(Datalink/DSigFormat)=&apos;4&apos;</condition>
+  </rule>
+
+  <rule name="FA_FR-Type">
+    <condition>string(Datalink/Type)=&apos;FR&apos; or string(Datalink/Type)=&apos;FA&apos;</condition>
+  </rule>
+
+  <rule name="Unknown Submitter">
+    <condition>string(Datalink/CSID)=sci-get-property(&apos;fbdatalink&apos;, &apos;FSN.Unknown.CSID&apos;)</condition>
+  </rule>
+
+  <rule name="DSIG Not Set">
+    <condition>string(Datalink/DSigFormat)!=&apos;1&apos; 
+and
+string(Datalink/DSigFormat)!=&apos;2&apos; 
+and 
+string(Datalink/DSigFormat)!=&apos;3&apos;
+and 
+string(Datalink/DSigFormat)!=&apos;4&apos;</condition>
+  </rule>
+
+  <rule name="NotSARegistered">
+    <condition>string-length(Datalink/CSID)=0</condition>
+  </rule>
+
+  <sequence name="Datalink Outbound">
+    <assign name="Assign" to="Datalink" from="/ProcessData/*[local-name()=&apos;CSID&apos; or local-name()=&apos;Format&apos; or local-name()=&apos;Type&apos; or local-name()=&apos;FSNID&apos; or local-name()=&apos;ProducerRef&apos; or local-name()=&apos;PFilename&apos;]"></assign>
+    <sequence name="SubFlow: Query Service Agreements">
+      <sequence name="Query SA by Type">
+        <choice name="File Type?">
+          <select>
+            <case ref="FA_FR-Type" activity="FSN"/>
+            <case ref="FA_FR-Type" negative="true" activity="Datalink File"/>
+          </select>
+
+          <sequence name="FSN">
+            <operation name="JDBC: Get original channel details">
+              <participant name="FB_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param1" from="string(Datalink/FSNID)"></assign>
+                <assign to="param2">0</assign>
+                <assign to="param3">0</assign>
+                <assign to="paramtype1">String</assign>
+                <assign to="paramtype2">Integer</assign>
+                <assign to="paramtype3">Integer</assign>
+                <assign to="sql">SELECT CUSTOMER_FILENAME, CHANNEL, CHANNEL_REFERENCE FROM FB_FILE WHERE DATAFLOW_ID=? AND ARCHIVED=? AND OUTBOUND=? ORDER BY FILE_ID DESC</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="Datalink/Channel" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CHANNEL/text()"></assign>
+                <assign to="Datalink/DCGRef" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CHANNEL_REFERENCE/text()"></assign>
+                <assign to="Datalink/FSNFilename" from="DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUSTOMER_FILENAME/text()"></assign>
+              </input>
+            </operation>
+
+            <operation name="Assign: Set as ACTIVE">
+              <participant name="AssignService"/>
+              <output message="AssignServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="Datalink/EndDue">0</assign>
+                <assign to="Datalink/StartDue">0</assign>
+                <assign to="Datalink/Status">ACT</assign>
+                <assign to="Datalink/DSigFormat" from="sci-get-property(&apos;fbdatalink&apos;, &apos;FSN.Unknown.DSigFormat&apos;)"></assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <choice name="Unknown?">
+              <select>
+                <case ref="Unknown Submitter" activity="Unknown"/>
+                <case ref="Unknown Submitter" negative="true" activity="Known"/>
+              </select>
+
+              <sequence name="Unknown">
+                <operation name="Assign">
+                  <participant name="AssignService"/>
+                  <output message="AssignServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="Datalink/Brand" from="sci-get-property(&apos;fbdatalink&apos;, &apos;FSN.Unknown.Brand&apos;)"></assign>
+                    <assign to="Datalink/CREF" from="sci-get-property(&apos;fbdatalink&apos;, &apos;FSN.Unknown.CSID&apos;)"></assign>
+                    <assign to="Datalink/DSigFormat" from="sci-get-property(&apos;fbdatalink&apos;, &apos;FSN.Unknown.DSigFormat&apos;)"></assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+              </sequence>
+              <sequence name="Known">
+                <operation name="JDBC: Query SA for FR-FA settings">
+                  <participant name="FB_SA_LWJDBC"/>
+                  <output message="LightweightJDBCAdapterTypeInputMessage">
+                    <assign to="param1" from="string(Datalink/CSID)"></assign>
+                    <assign to="param2">GPL</assign>
+                    <assign to="param3">FSNDSGFT</assign>
+                    <assign to="param4">CUST_AGMT_REF</assign>
+                    <assign to="param5">DATA_ELEMENT_CODE</assign>
+                    <assign to="param6">SERVICE_DETAIL</assign>
+                    <assign to="param7">RESPONSE_AREA</assign>
+                    <assign to="paramtype1">Double</assign>
+                    <assign to="paramtype2">String</assign>
+                    <assign to="paramtype3">String</assign>
+                    <assign to="paramtype4">Long</assign>
+                    <assign to="paramtype5">String</assign>
+                    <assign to="paramtype6">String</assign>
+                    <assign to="paramtype7">String</assign>
+                    <assign to="query_type">PROCEDURE</assign>
+                    <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbdatalink&apos;, &apos;SASchema&apos;), &apos;.YJSC33_GETCUSTPREF(?,?,?,?,?,?,?)&apos;)"></assign>
+                    <assign to="paramDirection4">OUT</assign>
+                    <assign to="paramDirection5">OUT</assign>
+                    <assign to="paramDirection6">OUT</assign>
+                    <assign to="paramDirection7">OUT</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="Datalink/CREF" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+                    <assign to="Datalink/DSigFormat" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM3)"></assign>
+                    <assign to="YJSC33Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM4)"></assign>
+                  </input>
+                </operation>
+
+              </sequence>
+            </choice>
+          </sequence>
+          <sequence name="Datalink File">
+            <operation name="JDBC: Query SA for DLK settings">
+              <participant name="FB_SA_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="param1" from="string(Datalink/ProducerRef)"></assign>
+                <assign to="param2">RESPONSE_AREA</assign>
+                <assign to="paramtype1">String</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="query_type">PROCEDURE</assign>
+                <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbdatalink&apos;, &apos;SASchema&apos;), &apos;.YJSC32_DLKOUT_CUST(?,?)&apos;)"></assign>
+                <assign to="paramDirection2">OUT</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="Datalink/Channel" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;DLOCHNL&apos;][1]/SERVICE_DETAIL)"></assign>
+                <assign to="Datalink/Compression" from="string(&apos;&apos;)"></assign>
+                <assign to="Datalink/CREF" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CUST_AGMT_REF)"></assign>
+                <assign to="Datalink/CSID" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/CESD_CUSTOMER_ID)"></assign>
+                <assign to="Datalink/DCGRef" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;DLOCHREF&apos;][1]/SERVICE_DETAIL)"></assign>
+                <assign to="Datalink/DSigFormat" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[DATA_ELEMENT_CODE=&apos;DDSGFMTO&apos;][1]/SERVICE_DETAIL)"></assign>
+                <assign to="Datalink/EndDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/END_DUE)"></assign>
+                <assign to="Datalink/StartDue" from="number(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/START_DUE)"></assign>
+                <assign to="Datalink/Status" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)/row[1]/STATUS_CODE)"></assign>
+                <assign to="YJSC32Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+              </input>
+            </operation>
+
+            <choice name="SARegistered?">
+              <select>
+                <case ref="NotSARegistered" activity="Set DLK Defaults"/>
+              </select>
+
+              <sequence name="Set DLK Defaults">
+                <operation name="Assign">
+                  <participant name="AssignService"/>
+                  <output message="AssignServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="Datalink/Brand" from="sci-get-property(&apos;fbdatalink&apos;, &apos;File.Unknown.Brand&apos;)"></assign>
+                    <assign to="Datalink/CREF" from="sci-get-property(&apos;fbdatalink&apos;, &apos;File.Unknown.CSID&apos;)"></assign>
+                    <assign to="Datalink/DSigFormat" from="sci-get-property(&apos;fbdatalink&apos;, &apos;File.Unknown.DSigFormat&apos;)"></assign>
+                    <assign to="Datalink/CSID" from="sci-get-property(&apos;fbdatalink&apos;, &apos;File.Unknown.CSID&apos;)"></assign>
+                    <assign to="Datalink/Channel" from="sci-get-property(&apos;fbdatalink&apos;, &apos;File.Unknown.Channel&apos;)"></assign>
+                    <assign to="Datalink/Status">ACT</assign>
+                    <assign to="Datalink/StartDue">0</assign>
+                    <assign to="Datalink/EndDue">0</assign>
+                    <assign to="Datalink/DCGRef" from="string(Datalink/ProducerRef)"></assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+                <operation name="FB Route Event: FB_8017">
+                  <participant name="FileGatewayRouteEventService"/>
+                  <output message="FileGatewayRouteEventServiceTypeInputMessage">
+                    <assign to="." from="*"></assign>
+                    <assign to="EventCode">FB_8017</assign>
+                    <assign to="ExceptionLevel">Normal</assign>
+                    <assign to="EventAttributes/ProducerRef" from="string(Datalink/ProducerRef)" append="true"></assign>
+                    <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="." from="*"></assign>
+                  </input>
+                </operation>
+
+              </sequence>
+            </choice>
+          </sequence>
+        </choice>
+        <sequence name="Verify Channel">
+          <assign name="Assign" to="Datalink/Channel" from="sci-get-property(&apos;fbdatalink&apos;, concat(&apos;SA.Channel.&apos;, Datalink/Channel))"></assign>
+          <onFault>
+            <sequence name="Invalid Channel">
+              <operation name="Business Process Exception">
+                <participant name="FB_BPEXCEPTION"/>
+                <output message="BPExceptionServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="exceptionCode">Channel is invalid and unsupported in FileBroker</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+            </sequence>
+          </onFault>
+        </sequence>
+      </sequence>
+    </sequence>
+    <sequence name="SubFlow: Validate Customer">
+      <sequence name="Validate">
+        <choice name="Valid?">
+          <select>
+            <case ref="InactiveCustomer" activity="Not Active"/>
+            <case ref="StartDateNotReached" activity="BeforeStartDate"/>
+            <case ref="EndDateReached" activity="AfterEndDate"/>
+          </select>
+
+          <sequence name="Not Active">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">Customer Agreement is not ACTIVE</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+          <sequence name="BeforeStartDate">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">Customer Agreement has not reached the Start Date</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+          <sequence name="AfterEndDate">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">Customer Agreement has passed the End Date</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+      </sequence>
+    </sequence>
+    <sequence name="SubFlow: Sign file">
+      <sequence name="Digital Signature">
+        <choice name="Signature Format?">
+          <select>
+            <case ref="SMIME" activity="SMIME"/>
+            <case ref="DSIG Not Set" activity="Not Set"/>
+          </select>
+
+          <sequence name="SMIME">
+            <operation name="JDBC: Query Bankline for Brand">
+              <participant name="FB_BL_LWJDBC"/>
+              <output message="LightweightJDBCAdapterTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="param1" from="string(Datalink/CSID)"></assign>
+                <assign to="param2">BRAND_CODE</assign>
+                <assign to="param3">RESPONSE_AREA</assign>
+                <assign to="paramtype1">Double</assign>
+                <assign to="paramtype2">String</assign>
+                <assign to="paramtype3">String</assign>
+                <assign to="query_type">PROCEDURE</assign>
+                <assign to="sql" from="concat(&apos;CALL &apos;, sci-get-property(&apos;fbdatalink&apos;, &apos;BLSchema&apos;), &apos;.YJSC11_GETCUSTBRND(?,?,?)&apos;)"></assign>
+                <assign to="paramDirection3">OUT</assign>
+                <assign to="paramDirection2">OUT</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="Datalink/Brand" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM1)"></assign>
+                <assign to="Datalink/CertIndex" from="number(1)"></assign>
+                <assign to="YJSC16Response" from="normalize-space(DocToDOM(PrimaryDocument, &apos;false&apos;)/OUTPUT_PARMS/PARM2)"></assign>
+              </input>
+            </operation>
+
+            <sequence name="CertFailover">
+              <assign name="Assign" to="Datalink/SignCert" from="sci-get-property(&apos;fbdatalink&apos;, concat(&apos;SMIME.Sign.&apos;, Datalink/Brand, &apos;.&apos;, Datalink/CertIndex))"></assign>
+              <sequence name="Sign File">
+                <operation name="CMS: Sign the file">
+                  <participant name="FB_SMIME"/>
+                  <output message="CryptoMsgServiceInputMessage">
+                    <assign to="action">build</assign>
+                    <assign to="pipelineTimeout" from="sci-get-property(&apos;fbdatalink&apos;, &apos;SMIME.Pipeline.Timeout&apos;)"></assign>
+                    <assign to="singleSignCert" from="string(Datalink/SignCert)"></assign>
+                    <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                    <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+                  </output>
+                  <input message="inmsg">
+                    <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                  </input>
+                </operation>
+
+                <onFault>
+                  <sequence name="SignError">
+                    <assign name="Assign" to="Datalink/CertIndex" from="number(Datalink/CertIndex)+1"></assign>
+                    <assign name="Assign" to="RouteOnErrorStatus">true</assign>
+                    <repeat name="CertFailover" ref="CertFailover"/>
+
+                  </sequence>
+                </onFault>
+              </sequence>
+              <onFault>
+                <sequence name="CertFindErr">
+                  <operation name="Business Process Exception">
+                    <participant name="FB_BPEXCEPTION"/>
+                    <output message="BPExceptionServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="exceptionCode">No signing certificates can be found</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </onFault>
+            </sequence>
+          </sequence>
+          <sequence name="Not Set">
+            <operation name="Business Process Exception">
+              <participant name="FB_BPEXCEPTION"/>
+              <output message="BPExceptionServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="exceptionCode">The Digital Signature format has not been defined</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+      </sequence>
+    </sequence>
+    <sequence name="SubFlow: Compress File">
+      <sequence name="Compression">
+        <choice name="Compression?">
+          <select>
+            <case ref="NoCompression" activity="None"/>
+            <case ref="GZIP" activity="GZIP"/>
+            <case ref="ZIP" activity="Zip"/>
+          </select>
+
+          <sequence name="None">
+            <assign name="Assign" to="Datalink/Compression">N</assign>
+          </sequence>
+          <sequence name="GZIP">
+            <operation name="GZIP">
+              <participant name="FB_GZIP"/>
+              <output message="GZIPInputMessage">
+                <assign to="compressed_filename" from="concat(Datalink/PFilename, &apos;.GZ&apos;)"></assign>
+                <assign to="compression_action">compress</assign>
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="Datalink/Compression" from="string(&apos;GZ&apos;)"></assign>
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+              </input>
+            </operation>
+
+            <assign name="Assign" to="Datalink/PFilename" from="concat(Datalink/PFilename, &apos;.GZ&apos;)"></assign>
+          </sequence>
+          <sequence name="Zip">
+            <operation name="Get Doc  Info: Rename doc">
+              <participant name="FB_GETDOCINFO"/>
+              <output message="GetDocumentInfoServiceTypeInputMessage">
+                <assign to="BodyName" from="string(Datalink/PFilename)"></assign>
+                <assign to="DocumentName" from="string(Datalink/PFilename)"></assign>
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                <assign to="updateMetaDataOnly">true</assign>
+              </output>
+              <input message="inmsg">
+              </input>
+            </operation>
+
+            <assign name="Assign" to="Datalink/PFilename" from="concat(Datalink/PFilename, &apos;.ZIP&apos;)"></assign>
+            <operation name="Compression Service">
+              <participant name="FB_ZIP"/>
+              <output message="compressionInputMessage">
+                <assign to="compressed_filename" from="string(Datalink/PFilename)"></assign>
+                <assign to="compression_action">Compress</assign>
+                <assign to="compression_level">9</assign>
+                <assign to="compression_type">Deflate</assign>
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+                <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="Datalink/Compression" from="string(&apos;ZIP&apos;)"></assign>
+                <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+              </input>
+            </operation>
+
+          </sequence>
+        </choice>
+      </sequence>
+    </sequence>
+    <sequence name="SubFlow: Register file">
+      <sequence name="Register">
+        <assign name="Assign" to="Datalink/RFilename" from="concat(Datalink/DCGRef, &apos;.&apos;, Datalink/Format, &apos;.&apos;, Datalink/Type, &apos;.&apos;, Datalink/Compression)"></assign>
+        <assign name="Assign" to="Datalink/CFilename" from="concat(Datalink/RFilename, &apos;_&apos;, Datalink/PFilename, &apos;@&apos;, Datalink/Channel)"></assign>
+        <operation name="FileBrokerFile: Register file">
+          <participant name="FB_FILEBROKER_FILE"/>
+          <output message="FileBrokerFileInputMessage">
+            <assign to="Channel" from="string(Datalink/Channel)"></assign>
+            <assign to="ChannelRef" from="string(Datalink/DCGRef)"></assign>
+            <assign to="CustomerFilename" from="string(Datalink/PFilename)"></assign>
+            <assign to="DataFlowID" from="string(RouteDataflowId)"></assign>
+            <assign to="Direction">Outbound</assign>
+            <assign to="DuplicateCheck">FALSE</assign>
+            <assign to="DuplicateDays">0</assign>
+            <assign to="SubmitterID" from="string(Datalink/CSID)"></assign>
+            <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+        <operation name="Get Doc Info: Rename document">
+          <participant name="FB_GETDOCINFO"/>
+          <output message="GetDocumentInfoServiceTypeInputMessage">
+            <assign to="DocumentName" from="string(Datalink/CFilename)"></assign>
+            <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+            <assign to="updateMetaDataOnly">true</assign>
+            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+      </sequence>
+    </sequence>
+    <onFault>
+      <sequence name="FB_8073">
+        <assign name="Assign" to="RouteOnErrorStatus">false</assign>
+        <operation name="FB Route Event: FB_8070">
+          <participant name="FileGatewayRouteEventService"/>
+          <output message="FileGatewayRouteEventServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FB_8073</assign>
+            <assign to="ExceptionLevel">Abnormal</assign>
+            <assign to="EventAttributes/Filename" from="string(Datalink/IFilename)" append="true"></assign>
+            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+        <operation name="Mailbox Add: Add to Route DeadLetter">
+          <participant name="FB_MAILBOXADD"/>
+          <output message="MailboxAddServiceTypeInputMessage">
+            <assign to="Extractable">YES</assign>
+            <assign to="MailboxPath" from="sci-get-property(&apos;fbdatalink&apos;, &apos;Route.DeadLetter&apos;)"></assign>
+            <assign to="MessageName" from="string(IFilename)"></assign>
+            <assign to="PrimaryDocument" from="PrimaryDocument/@SCIObjectID"></assign>
+          </output>
+          <input message="inmsg">
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

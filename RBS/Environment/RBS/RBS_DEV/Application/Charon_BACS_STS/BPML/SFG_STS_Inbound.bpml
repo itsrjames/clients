@@ -1,0 +1,336 @@
+<!-- 
+******************************************************************************************** 
+APPLICATION: BACS STS CHARON 
+PROCESS: SFG_STS_Inbound 
+******************************************************************************************** 
+See STS_v2.0-0_CHANGE_HISTORY.xml for Code Change Details 
+******************************************************************************************** 
+DATE / CHANGE ID 
+******************************************************************************************** 
+110215 / STS_v2.0-0_ID000004 
+20150316 - JO Changed Run Task Program and Sysopts to be obtains sfg.properties 
+******************************************************************************************** 
+--> 
+<process name="SFG_STS_Inbound"> 
+        <rule name="CharonOnline"> 
+               <condition>number(sci-get-property('sfg', 'STS.CharonCDAvailable'))=1</condition> 
+        </rule> 
+        <rule name="FileTypeIsS"> 
+               <condition>string(SFG_STS_Inbound/FType)='S'</condition> 
+        </rule> 
+        <sequence name="MAIN_SEQ"> 
+               <sequence name="STSInbound"> 
+                       <sequence name="SubFlowA: Terminate and check CD available"> 
+                               <operation name="BPControl"> 
+                                      <participant name="FB_BPCONTROL"/> 
+                                      <output message="BPControlInputMessage"> 
+                                              <assign to="." from="*"/> 
+                                              <assign to="Action">Terminate</assign> 
+                                              <assign to="HaltOnError">True</assign> 
+                                              <assign to="WFID" from="string(RESTART_FROM)"/> 
+                                      </output> 
+                                      <input message="inmsg"> 
+                                              <assign to="." from="*"/> 
+                                      </input> 
+                               </operation> 
+                               <sequence name="Check Charon"> 
+                                      <choice name="IsCharonAvailable?"> 
+                                              <select> 
+                                                     <case ref="CharonOnline" negative="true" activity="CharonOffline [STS08]"/> 
+                                              </select> 
+                                              <sequence name="CharonOffline [STS08]"> 
+                                                     <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">STS08</assign> 
+                                                     <operation name="Inline Invoke : Throw Error"> 
+                                                             <participant name="SFG_THROW_ERROR_INLINE_SG"/> 
+                                                             <output message="InlineInvokeBPTypeInputMessage"> 
+                                                                     <assign to="." from="*"/> 
+                                                             </output> 
+                                                             <input message="inmsg"> 
+                                                                     <assign to="." from="*"/> 
+                                                             </input> 
+                                                     </operation> 
+                                              </sequence> 
+                                      </choice> 
+                               </sequence> 
+                       </sequence> 
+                       <sequence name="SubFlowB: Store DATA file"> 
+                               <sequence name="STORE DATA"> 
+                                      <assign to="SFG_STS_Inbound/BIC" from="substring(SFG_handleSWIFTNetServerFAEvent/DataFilename,8,8)"></assign> 
+                                      <assign name="Assign" to="SFG_STS_Inbound/Group" from="substring(SFG_handleSWIFTNetServerFAEvent/DataFilename, 8, 4)"/> 
+                                      <assign name="Assign" to="SFG_STS_Inbound/FType" from="substring(SFG_handleSWIFTNetServerFAEvent/DataFilename, 5, 1)"/> 
+                                      <operation name="Mailbox Add: Store Data file"> 
+                                              <participant name="FB_MAILBOXADD"/> 
+                                              <output message="MailboxAddServiceTypeInputMessage"> 
+                                                     <assign to="." from="*"/> 
+                                                     <assign to="ExtractableCount">1</assign> 
+                                                     <assign to="MailboxPath" from="sci-get-property('sfg', concat('STS.InboundMailboxLocation.', string(SFG_STS_Inbound/Group)))"/> 
+                                                     <assign to="MessageName" from="string(SFG_handleSWIFTNetServerFAEvent/DataFilename)"/> 
+                                                     <assign to="PrimaryDocument" from="SFG_handleSWIFTNetServerFAEvent/DataFilesource/@SCIObjectID"/> 
+                                              </output> 
+                                              <input message="inmsg"> 
+                                                     <assign to="SFG_STS_Inbound" from="*"/> 
+                                              </input> 
+                                      </operation> 
+                                      <onFault> 
+                                              <sequence name="STS09"> 
+                                                     <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">STS09</assign> 
+                                                     <operation name="Inline Invoke : Throw Error"> 
+                                                             <participant name="SFG_THROW_ERROR_INLINE_SG"/> 
+                                                             <output message="InlineInvokeBPTypeInputMessage"> 
+                                                                     <assign to="." from="*"/> 
+                                                             </output> 
+                                                             <input message="inmsg"> 
+                                                                     <assign to="." from="*"/> 
+                                                             </input> 
+                                                     </operation> 
+                                              </sequence> 
+                                      </onFault> 
+                               </sequence> 
+                       </sequence> 
+                       <sequence name="SubFlowC: WTO Run Task on Charon"> 
+                               <sequence name="CD COPY"> 
+                                      <sequence name="CD Connect"> 
+                                              <choice name="FileTypeChoice"> 
+                                                     <select> 
+                                                             <case ref="FileTypeIsS" activity="RouteToRBSBACSSequence"></case> 
+                                                             <case ref="FileTypeIsS" negative="true" activity="RouteToWGLNBACSSequence"></case> 
+                                                     </select> 
+                                                     <sequence name="RouteToRBSBACSSequence"> 
+                                                             <operation name="CD Server Begin Session to Charon"> 
+                                                                     <participant name="FB_CD_BEGIN_SESSION"/> 
+                                                                     <output message="CDServerBeginSessionServiceTypeInputMessage"> 
+                                                                            <assign to="BeginSessionMaxRetries" from="sci-get-property('sfg', 'STS.InboundCDSessRetries')"/> 
+                                                                            <assign to="BeginSessionRetryInterval" from="sci-get-property('sfg', 'STS.InboundCDSessRetryInterval')"/> 
+                                                                            <assign to="LocalCDNodeName" from="sci-get-property('sfg', 'SFG.Local.CDServer')"/> 
+                                                                            <assign to="RemoteCDNodeName" from="sci-get-property('sfg', 'STS.InboundCDNodeName.RBOS')"/> 
+                                                                            <assign to="LocalUserId" from="sci-get-property('sfg', 'SFG.Local.CDUser')"/> 
+                                                                            <assign to="." from="*"/> 
+                                                                     </output> 
+                                                                     <input message="inmsg"> 
+                                                                            <assign to="SFG_STS_Inbound/CDSession" from="*"/> 
+                                                                     </input> 
+                                                             </operation> 
+                                                             <onFault> 
+                                                                     <sequence name="STS10"> 
+                                                                            <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">STS10</assign> 
+                                                                            <operation name="Inline Invoke : Throw Error"> 
+                                                                                    <participant name="SFG_THROW_ERROR_INLINE_SG"/> 
+                                                                                    <output message="InlineInvokeBPTypeInputMessage"> 
+                                                                                            <assign to="." from="*"/> 
+                                                                                    </output> 
+                                                                                    <input message="inmsg"> 
+                                                                                            <assign to="." from="*"/> 
+                                                                                    </input> 
+                                                                            </operation> 
+                                                                     </sequence> 
+                                                             </onFault>                                             
+                                                     </sequence> 
+                                                     <sequence name="RouteToWGLNBACSSequence"> 
+                                                             <operation name="CD Server Begin Session to Charon"> 
+                                                                     <participant name="FB_CD_BEGIN_SESSION"/> 
+                                                                     <output message="CDServerBeginSessionServiceTypeInputMessage"> 
+                                                                            <assign to="BeginSessionMaxRetries" from="sci-get-property('sfg', 'STS.InboundCDSessRetries')"/> 
+                                                                            <assign to="BeginSessionRetryInterval" from="sci-get-property('sfg', 'STS.InboundCDSessRetryInterval')"/> 
+                                                                            <assign to="LocalCDNodeName" from="sci-get-property('sfg', 'SFG.Local.CDServer')"/> 
+                                                                            <assign to="RemoteCDNodeName" from="sci-get-property('sfg', concat('STS.InboundCDNodeName.', string(SFG_STS_Inbound/Group)))"/> 
+                                                                            <assign to="LocalUserId" from="sci-get-property('sfg', 'SFG.Local.CDUser')"/> 
+                                                                            <assign to="." from="*"/> 
+                                                                     </output> 
+                                                                     <input message="inmsg"> 
+                                                                            <assign to="SFG_STS_Inbound/CDSession" from="*"/> 
+                                                                     </input> 
+                                                             </operation> 
+                                                             <onFault> 
+                                                                     <sequence name="STS10"> 
+                                                                            <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">STS10</assign> 
+                                                                            <operation name="Inline Invoke : Throw Error"> 
+                                                                                    <participant name="SFG_THROW_ERROR_INLINE_SG"/> 
+                                                                                    <output message="InlineInvokeBPTypeInputMessage"> 
+                                                                                            <assign to="." from="*"/> 
+                                                                                    </output> 
+                                                                                    <input message="inmsg"> 
+                                                                                            <assign to="." from="*"/> 
+                                                                                    </input> 
+                                                                            </operation> 
+                                                                     </sequence> 
+                                                             </onFault>                                             
+                                                     </sequence> 
+                                              </choice> 
+                                      </sequence> 
+                                      <sequence name="CD Copy To"> 
+<!-- JO: Added the This service to resolve the xpath for the sysopts --> 
+                                            <operation name="This: Create SysOpts"> 
+                                              <participant name="This"/> 
+                                              <output message="assignRequest"> 
+                                                <assign to="." from="*"></assign> 
+                                                <assign to="to">SFG_STS_Inbound/SysOpts</assign> 
+                                                <assign to="from" from="sci-get-property('sfg', 'STS.InboundRunTask.Program.SysoptsXpath')"></assign> 
+                                              </output> 
+                                              <input message="inmsg"> 
+                                                <assign to="." from="*"></assign> 
+                                              </input> 
+                                            </operation> 
+                                      
+                                              <operation name="CD Server Run Task Service"> 
+                                                     <participant name="FB_CD_RUN_TASK"/> 
+                                                     <output message="CDServerRunTaskServiceTypeInputMessage"> 
+<!--                                                         <assign to="Program">OPSWTO</assign> --> 
+<!--                                                         <assign to="Program">pgm(E:\IBM\CD\PROGRAM\OPSWTO.bat)</assign> --> 
+<!-- JO: Changed following 2 lines to get the parameters from the properties file --> 
+                                                             <assign to="Program" from="sci-get-property('sfg', concat('STS.InboundRunTask.Program.', string(SFG_STS_Inbound/Group)))"/> 
+                                                             <assign to="SystemOpts" from="string(SFG_STS_Inbound/SysOpts/text)"/> 
+                                                              
+                                                             <assign to="SessionToken" from="SFG_STS_Inbound/CDSession/SessionToken/*"/> 
+                                                             <!--<assign to="SystemOpts" from="string('')"></assign>--> 
+                                                             <assign to="." from="*"/> 
+                                                     </output> 
+                                                     <input message="inmsg"> 
+                                                             <assign to="." from="*"/> 
+                                                     </input> 
+                                              </operation> 
+                                              <onFault> 
+                                                     <sequence name="STS11"> 
+                                                             <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">STS11</assign> 
+                                                             <operation name="Inline Invoke : Throw Error"> 
+                                                                     <participant name="SFG_THROW_ERROR_INLINE_SG"/> 
+                                                                     <output message="InlineInvokeBPTypeInputMessage"> 
+                                                                            <assign to="." from="*"/> 
+                                                                     </output> 
+                                                                     <input message="inmsg"> 
+                                                                            <assign to="." from="*"/> 
+                                                                     </input> 
+                                                             </operation> 
+                                                     </sequence> 
+                                              </onFault> 
+                                      </sequence> 
+                                      <sequence name="CD Close"> 
+                                              <operation name="CD Server End Session Service"> 
+                                                     <participant name="FB_CD_END_SESSION"/> 
+                                                     <output message="CDServerEndSessionServiceTypeInputMessage"> 
+                                                             <assign to="SessionToken" from="SFG_STS_Inbound/CDSession/SessionToken/*"/> 
+                                                     </output> 
+                                                     <input message="inmsg"> 
+                                                             <assign to="." from="*"/> 
+                                                     </input> 
+                                              </operation> 
+                                              <onFault> 
+                                                     <sequence name="Err CD Close"> 
+                                                             <operation name="Business Process Metadata"> 
+                                                                     <participant name="FB_BPMETADATA"/> 
+                                                                     <output message="BPMetaDataServiceTypeInputMessage"> 
+                                                                            <assign to="." from="*"/> 
+                                                                     </output> 
+                                                                     <input message="inmsg"> 
+                                                                            <assign to="SFG_STS_Inbound/WFID" from="string(BPDATA/WORKFLOW_ID)"/> 
+                                                                     </input> 
+                                                             </operation> 
+                                                             <operation name="BPFaultLogXML"> 
+                                                                     <participant name="SFG_BP_FAULT_XML_LOG_SG"/> 
+                                                                     <output message="BPFaultLogXMLInputMessage"> 
+                                                                            <assign to="action">WRITE</assign> 
+                                                                            <assign to="fail-on-error">false</assign> 
+                                                                            <assign to="includeBody">false</assign> 
+                                                                            <assign to="log-level">WARN</assign> 
+                                                                            <assign to="log-message" from="concat('&lt;code&gt;&lt;/code&gt;&lt;wfid&gt;',string(SFG_STS_Inbound/WFID), '&lt;/wfid&gt;&lt;name&gt;Error closing CD Connection to Charon&lt;/name&gt;&lt;descr&gt;Error closing CD Connection to Charon&lt;/descr&gt;')"/> 
+                                                                            <assign to="loggerName">STSBPFault</assign> 
+                                                                            <assign to="loggerPath" from="sci-get-property('sfg', 'SFG.LogPath')"/> 
+                                                                            <assign to="logType">rolling</assign> 
+                                                                            <assign to="maxLogSize" from="sci-get-property('sfg', 'SFG.MaxLogSize')"/> 
+                                                                            <assign to="." from="*"/> 
+                                                                     </output> 
+                                                                     <input message="inmsg"> 
+                                                                            <assign to="." from="*"/> 
+                                                                     </input> 
+                                                             </operation> 
+                                                     </sequence> 
+                                              </onFault> 
+                                      </sequence> 
+                                      <operation name="Release CD Session"> 
+                                              <participant name="FB_RELEASE"/> 
+                                              <output message="ReleaseServiceTypeInputMessage"> 
+                                                     <assign to="TARGET">SFG_STS_Inbound/CDSession</assign> 
+                                                     <assign to="." from="*"/> 
+                                              </output> 
+                                              <input message="inmsg"> 
+                                                     <assign to="." from="*"/> 
+                                              </input> 
+                                      </operation> 
+                                      <onFault> 
+                                              <sequence name="CD Clean"> 
+                                                     <operation name="CD Server End Session Service"> 
+                                                             <participant name="FB_CD_END_SESSION"/> 
+                                                             <output message="CDServerEndSessionServiceTypeInputMessage"> 
+                                                                     <assign to="SessionToken" from="SFG_STS_Inbound/CDSession/SessionToken/*"/> 
+                                                                     <assign to="." from="*"/> 
+                                                             </output> 
+                                                             <input message="inmsg"> 
+                                                                     <assign to="." from="*"/> 
+                                                             </input> 
+                                                     </operation> 
+                                                     <operation name="Business Process Exception"> 
+                                                             <participant name="FB_BPEXCEPTION"/> 
+                                                             <output message="BPExceptionServiceTypeInputMessage"> 
+                                                                     <assign to="exceptionCode">Stack trace after successful CD Session termination</assign> 
+                                                                     <assign to="." from="*"/> 
+                                                             </output> 
+                                                             <input message="inmsg"> 
+                                                                     <assign to="." from="*"/> 
+                                                             </input> 
+                                                     </operation> 
+                                              </sequence> 
+                                      </onFault> 
+                               </sequence> 
+                       </sequence> 
+                       <onFault> 
+                               <sequence name="STS06"> 
+                                      <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">STS06</assign> 
+                                      <operation name="Inline Invoke : Throw Error"> 
+                                              <participant name="SFG_THROW_ERROR_INLINE_SG"/> 
+                                              <output message="InlineInvokeBPTypeInputMessage"> 
+                                                     <assign to="." from="*"/> 
+                                              </output> 
+                                              <input message="inmsg"> 
+                                                     <assign to="." from="*"/> 
+                                              </input> 
+                                      </operation> 
+                               </sequence> 
+                       </onFault> 
+               </sequence> 
+               <onFault> 
+                       <sequence name="HandleError"> 
+                               <!--<operation name="Invoke Sub-Process: STS Handle Error"> 
+                                      <participant name="FB_INVOKE_SUBPROCESS"/> 
+                                      <output message="InvokeSubProcessServiceTypeInputMessage"> 
+                                              <assign to="INVOKE_MODE">INLINE</assign> 
+                                              <assign to="NOTIFY_PARENT_ON_ERROR">NONE</assign> 
+                                              <assign to="WFD_NAME">SFG_STS_Handle_Error</assign> 
+                                              <assign to="." from="*"/> 
+                                      </output> 
+                                      <input message="inmsg"> 
+                                              <assign to="." from="*"/> 
+                                      </input> 
+                               </operation>--> 
+                               <operation name="Business Process Exception"> 
+                                      <participant name="FB_BPEXCEPTION"/> 
+                                      <output message="BPExceptionServiceTypeInputMessage"> 
+                                              <assign to="exceptionCode">Marking process as halted</assign> 
+                                              <assign to="." from="*"/> 
+                                      </output> 
+                                      <input message="inmsg"> 
+                                              <assign to="." from="*"/> 
+                                      </input> 
+                               </operation> 
+                               <operation name="Release Service"> 
+                                      <participant name="FB_RELEASE"/> 
+                                      <output message="ReleaseServiceTypeInputMessage"> 
+                                              <assign to="TARGET">SFG_STS_Inbound</assign> 
+                                              <assign to="." from="*"/> 
+                                      </output> 
+                                      <input message="inmsg"> 
+                                              <assign to="." from="*"/> 
+                                      </input> 
+                               </operation> 
+                       </sequence> 
+               </onFault> 
+        </sequence> 
+</process>

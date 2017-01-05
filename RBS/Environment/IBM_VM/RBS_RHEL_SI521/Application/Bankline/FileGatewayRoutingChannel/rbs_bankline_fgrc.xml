@@ -1,0 +1,1182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SI_RESOURCES xmlns="http://www.stercomm.com/SI/SI_IE_Resources" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" GISVersion="6000" resourceTag="RBS_BANKLINE_FGRC" FrameworkVersion="2">
+  <FG_ROUTINGCHANNELS>
+    <FgRoutingChannel MailboxName="/FileBroker/Datalink/FSN" ProducerOrganizationKey="FileBroker" RoutingChannelKey="20120522136345193785" RoutingChannelTemplateKey="201109131487462045060">
+      <RoutingChannelTemplate TemplateName="Datalink_FSN_Outbound"/>
+      <Producer OrganizationName="FileBroker"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201109131493462045064"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="Mainframe" MailboxName="/GSS/Datalink" ProducerOrganizationKey="GSS" RoutingChannelKey="20120522136045193788" RoutingChannelTemplateKey="201107071746284926733">
+      <RoutingChannelTemplate TemplateName="Datalink_Inbound"/>
+      <Producer OrganizationName="GSS"/>
+      <Consumer OrganizationName="Mainframe"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201107071749284926737"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="Mainframe" MailboxName="/SWIFTNet/Datalink" ProducerOrganizationKey="SWIFTNet" RoutingChannelKey="20120522136645193792" RoutingChannelTemplateKey="201107071746284926733">
+      <RoutingChannelTemplate TemplateName="Datalink_Inbound"/>
+      <Producer OrganizationName="SWIFTNet"/>
+      <Consumer OrganizationName="Mainframe"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201107071749284926737"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel MailboxName="/Mainframe/NWB/download/Datalink" ProducerOrganizationKey="Mainframe" RoutingChannelKey="20120522139645193796" RoutingChannelTemplateKey="201109131493472945097">
+      <RoutingChannelTemplate TemplateName="Datalink_Outbound"/>
+      <Producer OrganizationName="Mainframe"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201109131438472945101"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="1">
+        <FgProvisioningFact FactValue="NWB" ProvisioningFactKey="20120522137645193799" ProvisioningFactTemplateKey="201109131486472945119" RoutingChannelKey="20120522139645193796"/>
+      </FgProvisioningFactList>
+    </FgRoutingChannel>
+    <FgRoutingChannel MailboxName="/Mainframe/RBS/download/Datalink" ProducerOrganizationKey="Mainframe" RoutingChannelKey="20120522139145193801" RoutingChannelTemplateKey="201109131493472945097">
+      <RoutingChannelTemplate TemplateName="Datalink_Outbound"/>
+      <Producer OrganizationName="Mainframe"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201109131438472945101"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="1">
+        <FgProvisioningFact FactValue="RBS" ProvisioningFactKey="20120522134645193804" ProvisioningFactTemplateKey="201109131486472945119" RoutingChannelKey="20120522139145193801"/>
+      </FgProvisioningFactList>
+    </FgRoutingChannel>
+    <FgRoutingChannel MailboxName="/Mainframe/NWB/download/Datalink" ProducerOrganizationKey="Mainframe" RoutingChannelKey="201310011777024046573" RoutingChannelTemplateKey="201310011056103142983">
+      <RoutingChannelTemplate TemplateName="Datalink_Outbound_Format"/>
+      <Producer OrganizationName="Mainframe"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201310011098103142986"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="1">
+        <FgProvisioningFact FactValue="NWB" ProvisioningFactKey="201310011770024046576" ProvisioningFactTemplateKey="201310011039103142985" RoutingChannelKey="201310011777024046573"/>
+      </FgProvisioningFactList>
+    </FgRoutingChannel>
+    <FgRoutingChannel MailboxName="/Mainframe/RBS/download/Datalink" ProducerOrganizationKey="Mainframe" RoutingChannelKey="201310011700024046578" RoutingChannelTemplateKey="201310011056103142983">
+      <RoutingChannelTemplate TemplateName="Datalink_Outbound_Format"/>
+      <Producer OrganizationName="Mainframe"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201310011098103142986"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="1">
+        <FgProvisioningFact FactValue="RBS" ProvisioningFactKey="201310011714024046581" ProvisioningFactTemplateKey="201310011039103142985" RoutingChannelKey="201310011700024046578"/>
+      </FgProvisioningFactList>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="Mainframe" MailboxName="/FileBroker/GPL/BAOImport/NWB" ProducerOrganizationKey="FileBroker" RoutingChannelKey="20120513207149002704" RoutingChannelTemplateKey="2011021010604442268877">
+      <RoutingChannelTemplate TemplateName="GPL_BAOBatch_Inbound"/>
+      <Producer OrganizationName="FileBroker"/>
+      <Consumer OrganizationName="Mainframe"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="2011021010454443268882" MailboxName="/Mainframe/NWB/GPL/BAOImport"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="1">
+        <FgProvisioningFact FactValue="NWB" ProvisioningFactKey="20120513206849002707" ProvisioningFactTemplateKey="2011021010664443268890" RoutingChannelKey="20120513207149002704"/>
+      </FgProvisioningFactList>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="Mainframe" MailboxName="/FileBroker/GPL/BAOImport/RBS" ProducerOrganizationKey="FileBroker" RoutingChannelKey="20120513204649002709" RoutingChannelTemplateKey="2011021010604442268877">
+      <RoutingChannelTemplate TemplateName="GPL_BAOBatch_Inbound"/>
+      <Producer OrganizationName="FileBroker"/>
+      <Consumer OrganizationName="Mainframe"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="2011021010454443268882" MailboxName="/Mainframe/RBS/GPL/BAOImport"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="1">
+        <FgProvisioningFact FactValue="RBS" ProvisioningFactKey="20120513209049002712" ProvisioningFactTemplateKey="2011021010664443268890" RoutingChannelKey="20120513204649002709"/>
+      </FgProvisioningFactList>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="FileSplitter" MailboxName="/Mainframe/NWB/download/GPL/BAOExport" ProducerOrganizationKey="Mainframe" RoutingChannelKey="20120513206849012714" RoutingChannelTemplateKey="2011020814331747204211">
+      <RoutingChannelTemplate TemplateName="GPL_BAOBatch_Outbound"/>
+      <Producer OrganizationName="Mainframe"/>
+      <Consumer OrganizationName="FileSplitter"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="2011020814741747204216" MailboxName="/FileSplitter/GPL/BAOExport/Inbox"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="1">
+        <FgProvisioningFact FactValue="NWB" ProvisioningFactKey="20120513204449012717" ProvisioningFactTemplateKey="2011020814821748204229" RoutingChannelKey="20120513206849012714"/>
+      </FgProvisioningFactList>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="FileSplitter" MailboxName="/Mainframe/RBS/download/GPL/BAOExport" ProducerOrganizationKey="Mainframe" RoutingChannelKey="20120513202049012719" RoutingChannelTemplateKey="2011020814331747204211">
+      <RoutingChannelTemplate TemplateName="GPL_BAOBatch_Outbound"/>
+      <Producer OrganizationName="Mainframe"/>
+      <Consumer OrganizationName="FileSplitter"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="2011020814741747204216" MailboxName="/FileSplitter/GPL/BAOExport/Inbox"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="1">
+        <FgProvisioningFact FactValue="RBS" ProvisioningFactKey="20120513202349012722" ProvisioningFactTemplateKey="2011020814821748204229" RoutingChannelKey="20120513202049012719"/>
+      </FgProvisioningFactList>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="FileBroker" MailboxName="/GSS/GPL" ProducerOrganizationKey="GSS" RoutingChannelKey="20120513202049012724" RoutingChannelTemplateKey="2011022813542319493360">
+      <RoutingChannelTemplate TemplateName="GPL_BAO_Inbound_GSS"/>
+      <Producer OrganizationName="GSS"/>
+      <Consumer OrganizationName="FileBroker"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="2011022813392319493364" MailboxName="/FileBroker/GPL/BAOImport"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="FileBroker" MailboxName="/SFG/GPL" ProducerOrganizationKey="SFG" RoutingChannelKey="20120513206849012728" RoutingChannelTemplateKey="2011022813262823493405">
+      <RoutingChannelTemplate TemplateName="GPL_BAO_Inbound_SFG"/>
+      <Producer OrganizationName="SFG"/>
+      <Consumer OrganizationName="FileBroker"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="2011022813772823493409" MailboxName="/FileBroker/GPL/BAOImport"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="FileBroker" MailboxName="/SWIFTNet/GPL" ProducerOrganizationKey="SWIFTNet" RoutingChannelKey="20120522115537323265" RoutingChannelTemplateKey="2011022813262823493405">
+      <RoutingChannelTemplate TemplateName="GPL_BAO_Inbound_SFG"/>
+      <Producer OrganizationName="SWIFTNet"/>
+      <Consumer OrganizationName="FileBroker"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="2011022813772823493409" MailboxName="/FileBroker/GPL/BAOImport"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel MailboxName="/FileSplitter/GPL/BAOExport" ProducerOrganizationKey="FileSplitter" RoutingChannelKey="20120513201549012732" RoutingChannelTemplateKey="2011040414785649666799">
+      <RoutingChannelTemplate TemplateName="GPL_BAO_Outbound"/>
+      <Producer OrganizationName="FileSplitter"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="2011040414975649666803"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel MailboxName="/FileBroker/GPL/FSN" ProducerOrganizationKey="FileBroker" RoutingChannelKey="20120513206949022736" RoutingChannelTemplateKey="2011040414695708666822">
+      <RoutingChannelTemplate TemplateName="GPL_FSN_Outbound"/>
+      <Producer OrganizationName="FileBroker"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="2011040414465708666826"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="B2B" MailboxName="/GSS/GPL" ProducerOrganizationKey="GSS" RoutingChannelKey="20120513206833342516" RoutingChannelTemplateKey="20100205094807330771">
+      <RoutingChannelTemplate TemplateName="GPL_Inbound"/>
+      <Producer OrganizationName="GSS"/>
+      <Consumer OrganizationName="B2B"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="20100205094807330775" MailboxName="/B2B/GPL/Inbox"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="B2B" MailboxName="/SFG/GPL" ProducerOrganizationKey="SFG" RoutingChannelKey="20120513207133342520" RoutingChannelTemplateKey="20100205094807330771">
+      <RoutingChannelTemplate TemplateName="GPL_Inbound"/>
+      <Producer OrganizationName="SFG"/>
+      <Consumer OrganizationName="B2B"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="20100205094807330775" MailboxName="/B2B/GPL/Inbox"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="B2B" MailboxName="/SWIFTNet/GPL" ProducerOrganizationKey="SWIFTNet" RoutingChannelKey="20120522111237323269" RoutingChannelTemplateKey="20100205094807330771">
+      <RoutingChannelTemplate TemplateName="GPL_Inbound"/>
+      <Producer OrganizationName="SWIFTNet"/>
+      <Consumer OrganizationName="B2B"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="20100205094807330775" MailboxName="/B2B/GPL/Inbox"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="B2B" MailboxName="/FileBroker/GPL/B2B" ProducerOrganizationKey="FileBroker" RoutingChannelKey="20120513203133342524" RoutingChannelTemplateKey="20091201152226216387">
+      <RoutingChannelTemplate TemplateName="GPL_InternalToB2B"/>
+      <Producer OrganizationName="FileBroker"/>
+      <Consumer OrganizationName="B2B"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="20091201152226216393" MailboxName="/B2B/Inbox"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="GSS" MailboxName="/LegacyFB/GPL/GSS" ProducerOrganizationKey="LegacyFB" RoutingChannelKey="20120522118037333273" RoutingChannelTemplateKey="201106221588153324373">
+      <RoutingChannelTemplate TemplateName="GPL_LegacyFB_Delivery"/>
+      <Producer OrganizationName="LegacyFB"/>
+      <Consumer OrganizationName="GSS"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201106221503153324377" MailboxName="/GSS/GPL/Inbox"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="SWIFTNet" MailboxName="/LegacyFB/GPL/SWIFTNet" ProducerOrganizationKey="LegacyFB" RoutingChannelKey="20120522113237333277" RoutingChannelTemplateKey="201106221588153324373">
+      <RoutingChannelTemplate TemplateName="GPL_LegacyFB_Delivery"/>
+      <Producer OrganizationName="LegacyFB"/>
+      <Consumer OrganizationName="SWIFTNet"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201106221503153324377" MailboxName="/SWIFTNet/GPL/Inbox"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel MailboxName="/B2B/GPL" ProducerOrganizationKey="B2B" RoutingChannelKey="20120513208833342528" RoutingChannelTemplateKey="20100527091128451467">
+      <RoutingChannelTemplate TemplateName="GPL_Outbound"/>
+      <Producer OrganizationName="B2B"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="20100527091128451471"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="FileSplitter" MailboxName="/Mainframe/NWB/download/GPL/Reports" ProducerOrganizationKey="Mainframe" RoutingChannelKey="20120522139816343659" RoutingChannelTemplateKey="201110071595164249364">
+      <RoutingChannelTemplate TemplateName="GPL_ReportsBatch_Outbound"/>
+      <Producer OrganizationName="Mainframe"/>
+      <Consumer OrganizationName="FileSplitter"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201110071539164249368" MailboxName="/FileSplitter/GPL/Reports/Inbox"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="1">
+        <FgProvisioningFact FactValue="NWB" ProvisioningFactKey="20120522131216343662" ProvisioningFactTemplateKey="201110071555164249381" RoutingChannelKey="20120522139816343659"/>
+      </FgProvisioningFactList>
+    </FgRoutingChannel>
+    <FgRoutingChannel ConsumerOrganizationKey="FileSplitter" MailboxName="/Mainframe/RBS/download/GPL/Reports" ProducerOrganizationKey="Mainframe" RoutingChannelKey="20120522134816343664" RoutingChannelTemplateKey="201110071595164249364">
+      <RoutingChannelTemplate TemplateName="GPL_ReportsBatch_Outbound"/>
+      <Producer OrganizationName="Mainframe"/>
+      <Consumer OrganizationName="FileSplitter"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201110071539164249368" MailboxName="/FileSplitter/GPL/Reports/Inbox"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="1">
+        <FgProvisioningFact FactValue="RBS" ProvisioningFactKey="20120522130216343667" ProvisioningFactTemplateKey="201110071555164249381" RoutingChannelKey="20120522134816343664"/>
+      </FgProvisioningFactList>
+    </FgRoutingChannel>
+    <FgRoutingChannel MailboxName="/FileSplitter/GPL/Reports" ProducerOrganizationKey="FileSplitter" RoutingChannelKey="20120522139016343669" RoutingChannelTemplateKey="201110061476121649094">
+      <RoutingChannelTemplate TemplateName="GPL_Reports_Outbound"/>
+      <Producer OrganizationName="FileSplitter"/>
+      <FgDeliveryChannelList>
+        <FgDeliveryChannel DeliveryChannelTemplateKey="201110061461121649099"/>
+      </FgDeliveryChannelList>
+      <FgProvisioningFactList TotalNumberOfRecords="0"/>
+    </FgRoutingChannel>
+  </FG_ROUTINGCHANNELS>
+  <FG_ROUTINGCHANNEL_TEMPLATES>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="DYNAMIC" PartnerVisibleMailboxPattern="/${ProducerName}/Datalink/FSN" RoutingChannelTemplateKey="201109131487462045060" TemplateName="Datalink_FSN_Outbound">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="Datalink Outbound FSN File Container{^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9]+)$}/Datalink Outbound File Container{^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9.]+)$}/Text{^(.[^@]*)[@](.+)$}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PDFFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDFFC_P3_GUID" Value="${myDLKCSID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDFFC_P4_GUID" Value="${S:myDLKFSNFormat}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDFFC_P5_GUID" Value="${S:myDLKType}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDFFC_P6_GUID" Value="${myDLKFSNID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDFFC_P7_GUID" Value="${myDLKProducerRef}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDFFC_P8_GUID"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDFFC_P9_GUID" Value="${ProducerFilename}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDFFC_P10_GUID" Value="Datalink"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDFFC_P1_GUID" Value="^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9]+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDFFC_P2_GUID" Value="myDLKCSID,myDLKFSNFormat,myDLKType,myDLKFSNID,myDLKProducerRef"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="PDOFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P1_GUID" Value="^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9.]+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P2_GUID" Value="myDLKCSID,myDLKFormat,myDLKType,myDLKFSNID,myDLKPFilename"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P3_GUID" Value="${myDLKCSID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P4_GUID" Value="${S:myDLKFormat}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P5_GUID" Value="${S:myDLKType}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P6_GUID" Value="${myDLKFSNID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P7_GUID"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P8_GUID" Value="${myDLKPFilename}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P9_GUID" Value="${ProducerFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="2" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value="^(.[^@]*)[@](.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF" Value="myDLKInterfaceFilename,ConsumerName"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="201109131493462045064" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/Datalink/Inbox">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${myDLKInterfaceFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${myDLKInterfaceFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="0"/>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120522139045063700" PartnerGroupName="Datalink_FileBroker" RoutingChannelRole="P"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="C"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="STATIC" PartnerVisibleMailboxPattern="/${ProducerName}/Datalink" RoutingChannelTemplateKey="201107071746284926733" TemplateName="Datalink_Inbound">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="GPL Inbound File Container{^(.[^_]*)_(.+)$}/Datalink Inbound File{^(([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_][a-zA-Z0-9]*[_].+)$}/Text{^.[^@]*[@](.+)$}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PGIFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P1_GUID" Value="^(.[^_]*)_(.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P2_GUID" Value="myDLKRFilename,myDLKPFilename"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P3_GUID" Value="FB_DLK_Inbound_File_${ProducerCode}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P4_GUID" Value="${S:myDLKRFilename}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P5_GUID" Value="${S:myDLKPFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="PDIFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDIFC_P1_GUID" Value="^(([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_][a-zA-Z0-9]*[_].+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDIFC_P2_GUID" Value="myGPLInterfaceFilename,myGPLCSID,myGPLFormat,myGPLType,myGPLFileID"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDIFC_P3_GUID" Value="${S:myGPLType}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDIFC_P4_GUID" Value="${S:myGPLCSID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDIFC_P5_GUID" Value="${S:myGPLFormat}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDIFC_P6_GUID" Value="${S:myGPLFileID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDIFC_P7_GUID" Value="${S:myDLKPFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="2" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value="^.[^@]*[@](.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF" Value="myDLKDestination"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="201107071749284926737" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/${S:myDLKDestination}/Datalink">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${myDLKPFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${myDLKPFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="0"/>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="P"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120522135645063702" PartnerGroupName="Datalink_Mainframe" RoutingChannelRole="C"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="DYNAMIC" PartnerVisibleMailboxPattern="/${ProducerName}/${myRBSGBrand}/download/Datalink" RoutingChannelTemplateKey="201109131493472945097" TemplateName="Datalink_Outbound">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="Datalink Outbound File Container{^(.[^_]*)_(.+)$}/Text{^(.[^@]*)[@](.+)$}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PDOFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P8_GUID" Value="${myDLKPFilename}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P1_GUID" Value="^(.[^_]*)_(.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P2_GUID" Value="myDLKProducerRef,myDLKPFilename"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P3_GUID"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P4_GUID" Value="DLINK"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P5_GUID" Value="DL"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P6_GUID"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P7_GUID" Value="${myDLKProducerRef}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P9_GUID" Value="${ProducerFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value="^(.[^@]*)[@](.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF" Value="myDLKInterfaceFilename,ConsumerName"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="201109131438472945101" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/Datalink/Inbox">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${myDLKInterfaceFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${myDLKInterfaceFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="1">
+        <FgProvisioningFactTemplate Description="RBSG Brand - NWB, RBS" DisplayLabel="RBSG Brand" FactName="myRBSGBrand" ProvisioningFactTemplateKey="201109131486472945119" RoutingChannelTemplateKey="201109131493472945097"/>
+      </FgProvisioningFactTemplateList>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="C"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120522135645063702" PartnerGroupName="Datalink_Mainframe" RoutingChannelRole="P"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="DYNAMIC" PartnerVisibleMailboxPattern="/${ProducerName}/${myRBSGBrand}/download/Datalink" RoutingChannelTemplateKey="201310011056103142983" TemplateName="Datalink_Outbound_Format">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="Datalink Outbound File Container{^(.[^_]*)_(.[^.]*)[.](.[^_]*)_(.*)$}/Text{^(.[^@]*)[@](.+)$}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PDOFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P2_GUID" Value="myDLKProducerRef,myDLKFormat,myDLKType,myDLKPFilename"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P3_GUID"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P1_GUID" Value="^(.[^_]*)_(.[^.]*)[.](.[^_]*)_(.*)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P4_GUID" Value="${myDLKFormat}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P5_GUID" Value="${myDLKType}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P6_GUID"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P7_GUID" Value="${myDLKProducerRef}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P8_GUID" Value="${myDLKPFilename}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PDOFC_P9_GUID" Value="${ProducerFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value="^(.[^@]*)[@](.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF" Value="myDLKInterfaceFilename,ConsumerName"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="201310011098103142986" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/Datalink/Inbox">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${myDLKInterfaceFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${myDLKInterfaceFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="1">
+        <FgProvisioningFactTemplate Description="RBSG Brand - NWB, RBS" DisplayLabel="RBSG Brand" FactName="myRBSGBrand" ProvisioningFactTemplateKey="201310011039103142985" RoutingChannelTemplateKey="201310011056103142983"/>
+      </FgProvisioningFactTemplateList>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120522135645063702" PartnerGroupName="Datalink_Mainframe" RoutingChannelRole="P"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="C"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="STATIC" PartnerVisibleMailboxPattern="/${ProducerName}/GPL/BAOImport/${myRBSGBrand}" RoutingChannelTemplateKey="2011021010604442268877" TemplateName="GPL_BAOBatch_Inbound">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="Text{.+}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value=".+"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="2011021010454443268882" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/${myRBSGBrand}/GPL/BAOImport">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${ProducerFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${ProducerFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="1">
+        <FgProvisioningFactTemplate Description="RBSG Brand - RBS, NWB" DisplayLabel="RBSG Brand" FactName="myRBSGBrand" ProvisioningFactTemplateKey="2011021010664443268890" RoutingChannelTemplateKey="2011021010604442268877"/>
+      </FgProvisioningFactTemplateList>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513070327292089" PartnerGroupName="GPL_FileBroker" RoutingChannelRole="P"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513207148422574" PartnerGroupName="GPL_Mainframe" RoutingChannelRole="C"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="STATIC" PartnerVisibleMailboxPattern="/${ProducerName}/${myRBSGBrand}/download/GPL/BAOExport" RoutingChannelTemplateKey="2011020814331747204211" TemplateName="GPL_BAOBatch_Outbound">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="FileBroker File Translation{.+}/Text{.+}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PFBTC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFBTC_P1_GUID" Value=".+"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFBTC_P2_GUID"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFBTC_P3_GUID" Value="FB_GPL_ValidateBatchBAOExport"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFBTC_P4_GUID" Value="YES"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value=".+"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="2011020814741747204216" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/GPL/BAOExport/Inbox">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${ProducerFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${ProducerFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="1">
+        <FgProvisioningFactTemplate Description="RBSG Brand - RBS,NWB,ULS" DisplayLabel="RBSG Brand" FactName="myRBSGBrand" ProvisioningFactTemplateKey="2011020814821748204229" RoutingChannelTemplateKey="2011020814331747204211"/>
+      </FgProvisioningFactTemplateList>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513207148422574" PartnerGroupName="GPL_Mainframe" RoutingChannelRole="P"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513070327292089" PartnerGroupName="GPL_FileBroker" RoutingChannelRole="C"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="STATIC" PartnerVisibleMailboxPattern="/${ProducerName}/GPL" RoutingChannelTemplateKey="2011022813542319493360" TemplateName="GPL_BAO_Inbound_GSS">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="GPL Inbound File Container{^(.[^_]*)_(.+[.][Aa][Nn][.].+|.+[.][Aa][Nn])$}/GPL Inbound BAO File{^(([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_][a-zA-Z0-9]*[_](.+))$}/Text{.+}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PGIFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P2_GUID" Value="myGPLRFilename,myGPLPFilename"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P3_GUID" Value="FB_GPL_Inbound_File_${ProducerCode}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P4_GUID" Value="${S:myGPLRFilename}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P5_GUID" Value="${S:myGPLPFilename}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P1_GUID" Value="^(.[^_]*)_(.+[.][Aa][Nn][.].+|.+[.][Aa][Nn])$"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="PBAOC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P1_GUID" Value="^(([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_][a-zA-Z0-9]*[_](.+))$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P2_GUID" Value="myGPLInterfaceFilename,myGPLCSID,myGPLFormat,myGPLType,myFileID,myGPLBAOPFilename"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P3_GUID" Value="${S:myGPLType}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P4_GUID" Value="${S:myGPLCSID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P5_GUID" Value="${S:myGPLFormat}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P6_GUID" Value="${S:myFileID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P7_GUID" Value="${S:myGPLBAOPFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="2" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value=".+"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="2011022813392319493364" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/GPL/BAOImport">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${myFileID}_${myGPLBAOPFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${myFileID}_${myGPLBAOPFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="0"/>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513070327292089" PartnerGroupName="GPL_FileBroker" RoutingChannelRole="C"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="P"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="STATIC" PartnerVisibleMailboxPattern="/${ProducerName}/GPL" RoutingChannelTemplateKey="2011022813262823493405" TemplateName="GPL_BAO_Inbound_SFG">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="GPL Inbound File Container{^(.[^_]*[.][Aa][Nn][.].[^_]*)_(.+)$}/GPL Inbound BAO File{^(([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_][a-zA-Z0-9]*[_](.+))$}/Text{.+}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PGIFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P1_GUID" Value="^(.[^_]*[.][Aa][Nn][.].[^_]*)_(.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P2_GUID" Value="myGPLRFilename,myGPLPFilename"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P3_GUID" Value="FB_GPL_Inbound_File_${ProducerCode}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P4_GUID" Value="${S:myGPLRFilename}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P5_GUID" Value="${S:myGPLPFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="PBAOC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P1_GUID" Value="^(([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_][a-zA-Z0-9]*[_](.+))$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P2_GUID" Value="myGPLInterfaceFilename,myGPLCSID,myGPLFormat,myGPLType,myGPLFileID,myGPLBAOPFilename"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P3_GUID" Value="${S:myGPLType}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P4_GUID" Value="${S:myGPLCSID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P5_GUID" Value="${S:myGPLFormat}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P6_GUID" Value="${S:myGPLFileID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PBAOC_P7_GUID" Value="${S:myGPLBAOPFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="2" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value=".+"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="2011022813772823493409" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/GPL/BAOImport">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${myGPLFileID}_${myGPLBAOPFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${myGPLFileID}_${myGPLBAOPFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="0"/>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="P"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513070327292089" PartnerGroupName="GPL_FileBroker" RoutingChannelRole="C"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="DYNAMIC" PartnerVisibleMailboxPattern="/${ProducerName}/GPL/BAOExport" RoutingChannelTemplateKey="2011040414785649666799" TemplateName="GPL_BAO_Outbound">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="GPL Outbound File Container{^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9_]+)$}/Text{^(.[^@]*)[@](.+)$}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PGOFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P2_GUID" Value="myGPLCSID,myGPLFormat,myGPLType,myGPLFSNID,myGPLProducerRef"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P3_GUID" Value="${myGPLCSID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P4_GUID" Value="${S:myGPLFormat}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P5_GUID" Value="${S:myGPLType}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P6_GUID" Value="${myGPLFSNID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P7_GUID" Value="${myGPLProducerRef}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P8_GUID" Value="${ProducerFilename}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P1_GUID" Value="^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9_]+)$"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value="^(.[^@]*)[@](.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF" Value="myGPLInterfaceFilename,ConsumerName"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="2011040414975649666803" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/GPL/Inbox/${S:myGPLType}">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${myGPLInterfaceFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${myGPLInterfaceFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="0"/>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="C"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513070327292089" PartnerGroupName="GPL_FileBroker" RoutingChannelRole="P"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="DYNAMIC" PartnerVisibleMailboxPattern="/${ProducerName}/GPL/FSN" RoutingChannelTemplateKey="2011040414695708666822" TemplateName="GPL_FSN_Outbound">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="GPL Outbound FSN File Container{^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9_]+)$}/GPL Outbound File Container{^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9_]+)$}/Text{^(.[^@]*)[@](.+)$}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PFOFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFOFC_P1_GUID" Value="^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9_]+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFOFC_P2_GUID" Value="myGPLCSID,myGPLFSNFormat,myGPLType,myGPLFSNID,myGPLProducerRef"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFOFC_P3_GUID" Value="${myGPLCSID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFOFC_P4_GUID" Value="${S:myGPLFSNFormat}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFOFC_P5_GUID" Value="${S:myGPLType}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFOFC_P6_GUID" Value="${myGPLFSNID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFOFC_P7_GUID" Value="${myGPLProducerRef}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFOFC_P8_GUID" Value="${ProducerFilename}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFOFC_P9_GUID" Value="GPL"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="PGOFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P1_GUID" Value="^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9_]+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P2_GUID" Value="myGPLCSID,myGPLFormat,myGPLType,myGPLFSNID,myGPLProducerRef"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P3_GUID" Value="${myGPLCSID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P4_GUID" Value="${S:myGPLFormat}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P5_GUID" Value="${S:myGPLType}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P6_GUID" Value="${myGPLFSNID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P7_GUID" Value="${myGPLProducerRef}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P8_GUID" Value="${ProducerFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="2" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value="^(.[^@]*)[@](.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF" Value="myGPLInterfaceFilename,ConsumerName"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="2011040414465708666826" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/GPL/Inbox/${S:myGPLType}">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${myGPLInterfaceFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${myGPLInterfaceFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="0"/>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513070327292089" PartnerGroupName="GPL_FileBroker" RoutingChannelRole="P"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="C"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="STATIC" PartnerVisibleMailboxPattern="/${ProducerName}/GPL" RoutingChannelTemplateKey="20100205094807330771" TemplateName="GPL_Inbound">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="GPL Inbound File Container{^(.[^_]*)_(.+)$}/Text{^(([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*).+)$}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PGIFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P1_GUID" Value="^(.[^_]*)_(.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P2_GUID" Value="myGPLRFilename,myGPLPFilename"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P3_GUID" Value="FB_GPL_Inbound_File_${ProducerCode}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P4_GUID" Value="${S:myGPLRFilename}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGIFC_P5_GUID" Value="${S:myGPLPFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value="^(([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*).+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF" Value="myGPLInterfaceFilename,myGPLCSID,myGPLFormat,myGPLType,myFileID"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="20100205094807330775" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/GPL/Inbox">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${myGPLInterfaceFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${myGPLInterfaceFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="0"/>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="P"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513072027292084" PartnerGroupName="GPL_B2BDataExchange" RoutingChannelRole="C"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="STATIC" PartnerVisibleMailboxPattern="/${ProducerName}/GPL/B2B" RoutingChannelTemplateKey="20091201152226216387" TemplateName="GPL_InternalToB2B">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="Text{.+}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value=".+"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="20091201152226216393" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/Inbox">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${ProducerFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${ProducerFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="0"/>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513070327292089" PartnerGroupName="GPL_FileBroker" RoutingChannelRole="P"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513072027292084" PartnerGroupName="GPL_B2BDataExchange" RoutingChannelRole="C"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="STATIC" PartnerVisibleMailboxPattern="/${ProducerName}/GPL/${ConsumerCode}" RoutingChannelTemplateKey="201106221588153324373" TemplateName="GPL_LegacyFB_Delivery">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="Text{.+}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value=".+"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="201106221503153324377" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/GPL/Inbox">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${ProducerFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${ProducerFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="0"/>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120522118235393105" PartnerGroupName="GPL_LegacyFB" RoutingChannelRole="P"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="C"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="DYNAMIC" PartnerVisibleMailboxPattern="/${ProducerName}/GPL" RoutingChannelTemplateKey="20100527091128451467" TemplateName="GPL_Outbound">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="GPL Outbound File Container{^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9_]+)$}/Text{^(.[^@]*)[@](.+)$}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PGOFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P1_GUID" Value="^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9_]+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P2_GUID" Value="myGPLCSID,myGPLFormat,myGPLType,myGPLFSNID,myGPLProducerRef"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P3_GUID" Value="${myGPLCSID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P4_GUID" Value="${S:myGPLFormat}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P5_GUID" Value="${S:myGPLType}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P6_GUID" Value="${myGPLFSNID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P7_GUID" Value="${myGPLProducerRef}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P8_GUID" Value="${ProducerFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value="^(.[^@]*)[@](.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF" Value="myGPLInterfaceFilename,ConsumerName"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="20100527091128451471" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/GPL/Inbox/${S:myGPLType}">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${myGPLInterfaceFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${myGPLInterfaceFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="0"/>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513072027292084" PartnerGroupName="GPL_B2BDataExchange" RoutingChannelRole="P"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="C"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="STATIC" PartnerVisibleMailboxPattern="/${ProducerName}/${myRBSGBrand}/download/GPL/Reports" RoutingChannelTemplateKey="201110071595164249364" TemplateName="GPL_ReportsBatch_Outbound">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="FileBroker File Translation{.+}/Text{.+}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PFBTC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFBTC_P1_GUID" Value=".+"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFBTC_P2_GUID"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFBTC_P3_GUID" Value="FB_GPL_ValidateBatchReport"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PFBTC_P4_GUID" Value="YES"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value=".+"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="201110071539164249368" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/GPL/Reports/Inbox">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${ProducerFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${ProducerFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="1">
+        <FgProvisioningFactTemplate Description="RBSG Brand - RBS,NWB,ULS" DisplayLabel="RBSG Brand" FactName="myRBSGBrand" ProvisioningFactTemplateKey="201110071555164249381" RoutingChannelTemplateKey="201110071595164249364"/>
+      </FgProvisioningFactTemplateList>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513070327292089" PartnerGroupName="GPL_FileBroker" RoutingChannelRole="C"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513207148422574" PartnerGroupName="GPL_Mainframe" RoutingChannelRole="P"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+    <FgRoutingChannelTemplate ConsumerIdentificationType="DYNAMIC" PartnerVisibleMailboxPattern="/${ProducerName}/GPL/Reports" RoutingChannelTemplateKey="201110061476121649094" TemplateName="GPL_Reports_Outbound">
+      <ProducerFilenameCleaning Mode="None"/>
+      <FgProducerFileStructureList>
+        <FgProducerFileStructure Description="GPL Outbound File Container{^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9_]+)$}/Text{^(.[^@]*)[@](.+)$}">
+          <FgProducerFileLayerList>
+            <FgProducerFileLayer Ordinal="0" ProducerFileLayerTypeKey="PGOFC_GUID">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P2_GUID" Value="myGPLCSID,myGPLFormat,myGPLType,myGPLFSNID,myGPLProducerRef"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P1_GUID" Value="^([0-9]{1,11})[.]([a-zA-Z0-9]{1,5})[.]([a-zA-Z]{2})[.]([0-9]*)[_]([a-zA-Z0-9_]+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P3_GUID" Value="${myGPLCSID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P4_GUID" Value="${S:myGPLFormat}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P5_GUID" Value="${S:myGPLType}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P6_GUID" Value="${myGPLFSNID}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P7_GUID" Value="${myGPLProducerRef}"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="PGOFC_P8_GUID" Value="${ProducerFilename}"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+            <FgProducerFileLayer Ordinal="1" ProducerFileLayerTypeKey="FGSYS_PFLT_TEXT">
+              <FgProducerFileLayerParameterList>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FP" Value="^(.[^@]*)[@](.+)$"/>
+                <FgProducerFileLayerParameter ProducerFileLayerParameterTypeKey="FGSYS_PFLPT_TEXT_FPF" Value="myGPLInterfaceFilename,ConsumerName"/>
+              </FgProducerFileLayerParameterList>
+            </FgProducerFileLayer>
+          </FgProducerFileLayerList>
+        </FgProducerFileStructure>
+      </FgProducerFileStructureList>
+      <FgRoutingChannelTemplateParameterList/>
+      <FgDeliveryChannelTemplateList>
+        <FgDeliveryChannelTemplate DeliveryChannelTemplateKey="201110061461121649099" LateCreateMailbox="N" PartnerVisibleMailboxPattern="/${ConsumerName}/GPL/Inbox/${S:myGPLType}">
+          <FgConsumerFileStructureList>
+            <FgConsumerFileStructure Description="Text{${myGPLInterfaceFilename}}">
+              <FgConsumerFileLayerList>
+                <FgConsumerFileLayer ConsumerFileLayerTypeKey="FGSYS_CFLT_TEXT" Ordinal="0">
+                  <FgConsumerFileLayerParameterList>
+                    <FgConsumerFileLayerParameter ConsumerFileLayerParameterTypeKey="FGSYS_CFLPT_TEXT_FF" Value="${myGPLInterfaceFilename}"/>
+                  </FgConsumerFileLayerParameterList>
+                </FgConsumerFileLayer>
+              </FgConsumerFileLayerList>
+            </FgConsumerFileStructure>
+          </FgConsumerFileStructureList>
+        </FgDeliveryChannelTemplate>
+      </FgDeliveryChannelTemplateList>
+      <FgProvisioningFactTemplateList TotalNumberOfRecords="0"/>
+      <FgRoutingChannelTemplateGroupPermissionList>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513079227292086" PartnerGroupName="GPL_DeliveryChannels" RoutingChannelRole="C"/>
+        <FgRoutingChannelTemplateGroupPermission PartnerGroupKey="20120513070327292089" PartnerGroupName="GPL_FileBroker" RoutingChannelRole="P"/>
+      </FgRoutingChannelTemplateGroupPermissionList>
+    </FgRoutingChannelTemplate>
+  </FG_ROUTINGCHANNEL_TEMPLATES>
+  <FG_GROUPS>
+    <FgPartnerGroup Name="GPL_DeliveryChannels">
+      <FgPartnerGroupMemberList>
+        <FgPartnerGroupMember OrganizationKey="RPF"/>
+        <FgPartnerGroupMember OrganizationKey="GSS"/>
+        <FgPartnerGroupMember OrganizationKey="SFG"/>
+        <FgPartnerGroupMember OrganizationKey="SWIFTNet"/>
+        <FgPartnerGroupMember OrganizationKey="RPE"/>
+      </FgPartnerGroupMemberList>
+    </FgPartnerGroup>
+    <FgPartnerGroup Name="Datalink_FileBroker">
+      <FgPartnerGroupMemberList>
+        <FgPartnerGroupMember OrganizationKey="FileBroker"/>
+      </FgPartnerGroupMemberList>
+    </FgPartnerGroup>
+    <FgPartnerGroup Name="Datalink_Mainframe">
+      <FgPartnerGroupMemberList>
+        <FgPartnerGroupMember OrganizationKey="Mainframe"/>
+      </FgPartnerGroupMemberList>
+    </FgPartnerGroup>
+    <FgPartnerGroup Name="GPL_FileBroker">
+      <FgPartnerGroupMemberList>
+        <FgPartnerGroupMember OrganizationKey="FileBroker"/>
+        <FgPartnerGroupMember OrganizationKey="FileSplitter"/>
+      </FgPartnerGroupMemberList>
+    </FgPartnerGroup>
+    <FgPartnerGroup Name="GPL_Mainframe">
+      <FgPartnerGroupMemberList>
+        <FgPartnerGroupMember OrganizationKey="Mainframe"/>
+      </FgPartnerGroupMemberList>
+    </FgPartnerGroup>
+    <FgPartnerGroup Name="GPL_B2BDataExchange">
+      <FgPartnerGroupMemberList>
+        <FgPartnerGroupMember OrganizationKey="B2B"/>
+      </FgPartnerGroupMemberList>
+    </FgPartnerGroup>
+    <FgPartnerGroup Name="GPL_LegacyFB">
+      <FgPartnerGroupMemberList>
+        <FgPartnerGroupMember OrganizationKey="LegacyFB"/>
+      </FgPartnerGroupMemberList>
+    </FgPartnerGroup>
+  </FG_GROUPS>
+  <FG_PRODUCER_FILELAYERS>
+    <FgProducerFileLayerType ContainsName="Y" Description="Datalink Outbound FSN File Container" DisplayLabel="Datalink Outbound FSN File Container" IsContainer="Y" LayerType="FGC_PDFFC" ProducerFileLayerTypeKey="PDFFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="10">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PDFFC_P1_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PDFFC_P2_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Client Services ID input" DisplayLabel="Client Services ID input" DisplayType="String" Ordinal="2" ParameterName="CSID" ProducerFileLayerParameterTypeKey="PDFFC_P3_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="File Format" DisplayType="String" Ordinal="3" ParameterName="Format" ProducerFileLayerParameterTypeKey="PDFFC_P4_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="File Type" DisplayType="String" Ordinal="4" ParameterName="Type" ProducerFileLayerParameterTypeKey="PDFFC_P5_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID for FSN" DisplayLabel="File ID for FSN" DisplayType="String" Ordinal="5" ParameterName="FSNID" ProducerFileLayerParameterTypeKey="PDFFC_P6_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Reference set by the Producer of the file" DisplayLabel="Producer Reference" DisplayType="String" Ordinal="6" ParameterName="ProducerRef" ProducerFileLayerParameterTypeKey="PDFFC_P7_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Customer filename set by the Producer of the file" DisplayLabel="Producer Filename" DisplayType="String" Ordinal="7" ParameterName="PFilename" ProducerFileLayerParameterTypeKey="PDFFC_P8_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Filename set by the producer for the interface" DisplayLabel="Interface Filename" DisplayType="String" Ordinal="8" ParameterName="IFilename" ProducerFileLayerParameterTypeKey="PDFFC_P9_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Bankline Service" DisplayLabel="Bankline Service" DisplayType="String" Ordinal="9" ParameterName="Service" ProducerFileLayerParameterTypeKey="PDFFC_P10_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="Datalink Outbound File Container" DisplayLabel="Datalink Outbound File Container" IsContainer="Y" LayerType="FGC_PDOFC" ProducerFileLayerTypeKey="PDOFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="9">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PDOFC_P1_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PDOFC_P2_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Client Services ID input" DisplayLabel="Client Services ID input" DisplayType="String" Ordinal="2" ParameterName="CSID" ProducerFileLayerParameterTypeKey="PDOFC_P3_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="File Format" DisplayType="String" Ordinal="3" ParameterName="Format" ProducerFileLayerParameterTypeKey="PDOFC_P4_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="File Type" DisplayType="String" Ordinal="4" ParameterName="Type" ProducerFileLayerParameterTypeKey="PDOFC_P5_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID for FSN" DisplayLabel="File ID for FSN" DisplayType="String" Ordinal="5" ParameterName="FSNID" ProducerFileLayerParameterTypeKey="PDOFC_P6_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Reference set by the Producer of the file" DisplayLabel="Producer Reference" DisplayType="String" Ordinal="6" ParameterName="ProducerRef" ProducerFileLayerParameterTypeKey="PDOFC_P7_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Customer Filename set by the Producer of the file" DisplayLabel="Producer Filename" DisplayType="String" Ordinal="7" ParameterName="PFilename" ProducerFileLayerParameterTypeKey="PDOFC_P8_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Entire Filename set by the producer for the interface" DisplayLabel="Interface Filename" DisplayType="String" Ordinal="8" ParameterName="IFilename" ProducerFileLayerParameterTypeKey="PDOFC_P9_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="GPL Inbound File Container" DisplayLabel="GPL Inbound File Container" IsContainer="Y" LayerType="FGC_PGIFC" ProducerFileLayerTypeKey="PGIFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="5">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PGIFC_P1_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PGIFC_P2_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Process that reads and validates the interface filename" DisplayLabel="Handler Process" DisplayType="String" Ordinal="2" ParameterName="HandlerProcess" ProducerFileLayerParameterTypeKey="PGIFC_P3_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Routing Filename set by the DCG" DisplayLabel="Routing Filename" DisplayType="String" Ordinal="3" ParameterName="RFilename" ProducerFileLayerParameterTypeKey="PGIFC_P4_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Producer Filename set by the Customer" DisplayLabel="Producer Filename" DisplayType="String" Ordinal="4" ParameterName="PFilename" ProducerFileLayerParameterTypeKey="PGIFC_P5_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="Datalink Inbound File" DisplayLabel="Datalink Inbound File" IsContainer="Y" LayerType="FGC_PDIFC" ProducerFileLayerTypeKey="PDIFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="7">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PDIFC_P1_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PDIFC_P2_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="GPL File Type" DisplayType="String" Ordinal="2" ParameterName="GPLFileType" ProducerFileLayerParameterTypeKey="PDIFC_P3_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL Customer ID" DisplayLabel="GPL Customer ID" DisplayType="String" Ordinal="3" ParameterName="GPLCSID" ProducerFileLayerParameterTypeKey="PDIFC_P4_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="GPL File Format" DisplayType="String" Ordinal="4" ParameterName="GPLFileFormat" ProducerFileLayerParameterTypeKey="PDIFC_P5_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID" DisplayLabel="GPL File ID" DisplayType="String" Ordinal="5" ParameterName="GPLFileID" ProducerFileLayerParameterTypeKey="PDIFC_P6_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Producer Filename set by the Customer" DisplayLabel="Producer Filename" DisplayType="String" Ordinal="6" ParameterName="PFilename" ProducerFileLayerParameterTypeKey="PDIFC_P7_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="FileBroker File Translation" DisplayLabel="FileBroker File Translation" IsContainer="Y" LayerType="FGC_PFBTC" ProducerFileLayerTypeKey="PFBTC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="4">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PFBTC_P1_GUID" ProducerFileLayerTypeKey="PFBTC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PFBTC_P2_GUID" ProducerFileLayerTypeKey="PFBTC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Map Name" DisplayLabel="Map Name" DisplayType="String" Ordinal="2" ParameterName="MapName" ProducerFileLayerParameterTypeKey="PFBTC_P3_GUID" ProducerFileLayerTypeKey="PFBTC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Validate Input (YES or NO)" DisplayLabel="Validate Input" DisplayType="String" Ordinal="3" ParameterName="Validate" ProducerFileLayerParameterTypeKey="PFBTC_P4_GUID" ProducerFileLayerTypeKey="PFBTC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="GPL Inbound Bulk Account Opening File" DisplayLabel="GPL Inbound BAO File" IsContainer="Y" LayerType="FGC_PBAOC" ProducerFileLayerTypeKey="PBAOC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="7">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PBAOC_P1_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PBAOC_P2_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="GPL File Type" DisplayType="String" Ordinal="2" ParameterName="GPLFileType" ProducerFileLayerParameterTypeKey="PBAOC_P3_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL Customer ID" DisplayLabel="GPL Customer ID" DisplayType="String" Ordinal="3" ParameterName="GPLCSID" ProducerFileLayerParameterTypeKey="PBAOC_P4_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="GPL File Format" DisplayType="String" Ordinal="4" ParameterName="GPLFileFormat" ProducerFileLayerParameterTypeKey="PBAOC_P5_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID" DisplayLabel="GPL File ID" DisplayType="String" Ordinal="5" ParameterName="GPLFileID" ProducerFileLayerParameterTypeKey="PBAOC_P6_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Producer Filename set by the Customer" DisplayLabel="Producer Filename" DisplayType="String" Ordinal="6" ParameterName="PFilename" ProducerFileLayerParameterTypeKey="PBAOC_P7_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="GPL Outbound File Container" DisplayLabel="GPL Outbound File Container" IsContainer="Y" LayerType="FGC_PGOFC" ProducerFileLayerTypeKey="PGOFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="8">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PGOFC_P1_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PGOFC_P2_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Client Services ID input" DisplayLabel="Client Services ID input" DisplayType="String" Ordinal="2" ParameterName="CSID" ProducerFileLayerParameterTypeKey="PGOFC_P3_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="File Format" DisplayType="String" Ordinal="3" ParameterName="Format" ProducerFileLayerParameterTypeKey="PGOFC_P4_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="File Type" DisplayType="String" Ordinal="4" ParameterName="Type" ProducerFileLayerParameterTypeKey="PGOFC_P5_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID for FSN" DisplayLabel="File ID for FSN" DisplayType="String" Ordinal="5" ParameterName="FSNID" ProducerFileLayerParameterTypeKey="PGOFC_P6_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Reference set by the Producer of the file" DisplayLabel="Producer Reference" DisplayType="String" Ordinal="6" ParameterName="ProducerRef" ProducerFileLayerParameterTypeKey="PGOFC_P7_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Filename set by the producer for the interface" DisplayLabel="Interface Filename" DisplayType="String" Ordinal="7" ParameterName="IFilename" ProducerFileLayerParameterTypeKey="PGOFC_P8_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+    <FgProducerFileLayerType ContainsName="Y" Description="GPL Outbound FSN File Container" DisplayLabel="GPL Outbound FSN File Container" IsContainer="Y" LayerType="FGC_PFOFC" ProducerFileLayerTypeKey="PFOFC_GUID">
+      <FgProducerFileLayerParameterTypeList TotalNumberOfRecords="9">
+        <FgProducerFileLayerParameterType Description="File name pattern as regular expression" DisplayLabel="File name pattern" DisplayType="String" Ordinal="0" ParameterName="FILENAME_PATTERN" ProducerFileLayerParameterTypeKey="PFOFC_P1_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="File name pattern group fact names, comma delimited" DisplayLabel="File name pattern fact names" DisplayType="String" Ordinal="1" ParameterName="FILENAME_PATTERN_FACTNAMES" ProducerFileLayerParameterTypeKey="PFOFC_P2_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Client Services ID input" DisplayLabel="Client Services ID input" DisplayType="String" Ordinal="2" ParameterName="CSID" ProducerFileLayerParameterTypeKey="PFOFC_P3_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Format" DisplayLabel="File Format" DisplayType="String" Ordinal="3" ParameterName="Format" ProducerFileLayerParameterTypeKey="PFOFC_P4_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File Type" DisplayLabel="File Type" DisplayType="String" Ordinal="4" ParameterName="Type" ProducerFileLayerParameterTypeKey="PFOFC_P5_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="GPL File ID for FSN" DisplayLabel="File ID for FSN" DisplayType="String" Ordinal="5" ParameterName="FSNID" ProducerFileLayerParameterTypeKey="PFOFC_P6_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Reference set by the Producer of the file" DisplayLabel="Producer Reference" DisplayType="String" Ordinal="6" ParameterName="ProducerRef" ProducerFileLayerParameterTypeKey="PFOFC_P7_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Filename set by the producer for the interface" DisplayLabel="Interface Filename" DisplayType="String" Ordinal="7" ParameterName="IFilename" ProducerFileLayerParameterTypeKey="PFOFC_P8_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+        <FgProducerFileLayerParameterType Description="Bankline Service" DisplayLabel="Bankline Service" DisplayType="String" Ordinal="8" ParameterName="Service" ProducerFileLayerParameterTypeKey="PFOFC_P9_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+      </FgProducerFileLayerParameterTypeList>
+    </FgProducerFileLayerType>
+  </FG_PRODUCER_FILELAYERS>
+  <FG_PRODUCER_FILELAYER_TRANSLATIONS>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_DLK_Outbound_FSN_File" ProducerFileLayerTranslationKey="PDFFC_T1_GUID" ProducerFileLayerTypeKey="PDFFC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_DLK_Outbound_File" ProducerFileLayerTranslationKey="PDOFC_T1_GUID" ProducerFileLayerTypeKey="PDOFC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_GPL_Inbound_File" ProducerFileLayerTranslationKey="PGIFC_T1_GUID" ProducerFileLayerTypeKey="PGIFC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_DLK_Inbound_File" ProducerFileLayerTranslationKey="PDIFC_T1_GUID" ProducerFileLayerTypeKey="PDIFC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_File_Translation" ProducerFileLayerTranslationKey="PFBTC_T1_GUID" ProducerFileLayerTypeKey="PFBTC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_GPL_Inbound_BAO_File" ProducerFileLayerTranslationKey="PBAOC_T1_GUID" ProducerFileLayerTypeKey="PBAOC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_GPL_Outbound_File" ProducerFileLayerTranslationKey="PGOFC_T1_GUID" ProducerFileLayerTypeKey="PGOFC_GUID"/>
+    <FgProducerFileLayerTranslation BusinessProcessName="FB_GPL_Outbound_FSN_File" ProducerFileLayerTranslationKey="PFOFC_T1_GUID" ProducerFileLayerTypeKey="PFOFC_GUID"/>
+  </FG_PRODUCER_FILELAYER_TRANSLATIONS>
+</SI_RESOURCES>

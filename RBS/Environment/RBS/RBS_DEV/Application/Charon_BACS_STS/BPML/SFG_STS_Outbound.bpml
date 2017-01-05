@@ -1,0 +1,262 @@
+<process name="SFG_STS_Outbound"> 
+  <rule name="SAGOnline"> 
+    <condition>number(sci-get-property(&apos;sfg&apos;, &apos;STS.SAGAvailable&apos;))=1</condition> 
+  </rule> 
+  
+  <sequence name="MAIN_SEQ"> 
+    <sequence name="STSOutbound"> 
+      <sequence name="SubFlowA: Terminate restarted and check SAG available"> 
+        <sequence name="CheckRestart"> 
+          <operation name="BPControl"> 
+                                      <participant name="FB_BPCONTROL"/> 
+                                      <output message="BPControlInputMessage"> 
+                                              <assign to="." from="*"/> 
+                                              <assign to="Action">Terminate</assign> 
+                                              <assign to="HaltOnError">True</assign> 
+                                              <assign to="WFID" from="string(RESTART_FROM)"/> 
+                                      </output> 
+                                      <input message="inmsg"> 
+                                              <assign to="." from="*"/> 
+                                      </input> 
+                               </operation> 
+  
+        </sequence> 
+        <sequence name="Check SAG"> 
+          <choice name="IsSAGAvailable?"> 
+            <select> 
+              <case ref="SAGOnline" negative="true" activity="SAGOffline [STS04]"/> 
+            </select> 
+  
+            <sequence name="SAGOffline [STS04]"> 
+              <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">STS04</assign> 
+              <operation name="Inline Invoke : Throw Error"> 
+                <participant name="SFG_THROW_ERROR_INLINE_SG"/> 
+                <output message="InlineInvokeBPTypeInputMessage"> 
+                  <assign to="." from="*"></assign> 
+                </output> 
+                <input message="inmsg"> 
+                  <assign to="." from="*"></assign> 
+                </input> 
+              </operation> 
+  
+            </sequence> 
+          </choice> 
+        </sequence> 
+      </sequence> 
+      <sequence name="SubFlowB: Set FileAct parameters"> 
+        <sequence name="Initialize FA Params"> 
+          <assign name="Assign" to="SFG_SWIFTNet_Client_FA/Filesource" from="PrimaryDocument/@SCIObjectID"></assign> 
+          <operation name="Release: Primary Document"> 
+            <participant name="FB_RELEASE"/> 
+           <output message="ReleaseServiceTypeInputMessage"> 
+              <assign to="TARGET">PrimaryDocument</assign> 
+              <assign to="." from="*"></assign> 
+            </output> 
+            <input message="inmsg"> 
+              <assign to="." from="*"></assign> 
+            </input> 
+          </operation> 
+  
+          <operation name="Get Document Info: Get Filename"> 
+            <participant name="FB_GETDOCINFO"/> 
+            <output message="GetDocumentInfoServiceTypeInputMessage"> 
+              <assign to="PrimaryDocument" from="SFG_SWIFTNet_Client_FA/Filesource/@SCIObjectID"></assign> 
+              <assign to="." from="*"></assign> 
+            </output> 
+            <input message="inmsg"> 
+              <assign to="SFG_SWIFTNet_Client_FA/Filename" from="string(DocumentName)"></assign> 
+              <assign to="SFG_STS_Outbound/Group" from="substring(DocumentName, 8, 4)" append="true"></assign> 
+            </input> 
+          </operation> 
+          
+          <operation name="Assign: Assign STS FA properties"> 
+                       <participant name="AssignService"/> 
+                       <output message="AssignServiceTypeInputMessage"> 
+                               <assign to="." from="*"></assign> 
+                              <assign to="SFG_SWIFTNet_Client_FA/OutboundLocation" from="sci-get-property(&apos;sfg&apos;, &apos;STS.FA.OutboundDataFileLocation&apos;)"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/RequestType" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.RequestType&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/TransferDescr" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.TransferDescr&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/TransferInfo" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.TransferInfo&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/RequestReference" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.RequestReference&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/DeliveryNotification" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.DeliveryNotification&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/DeliveryNotificationDN" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.DeliveryNotificationDN&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/DeliveryNotificationRT" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.DeliveryNotificationRT&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/SnF" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.SnF&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/NumOfRetries" from="sci-get-property(&apos;sfg&apos;, &apos;STS.FA.NumOfRetries&apos;)"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/RequestorDN" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.RequestorDN&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/ResponderDN" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.ResponderDN&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/SecInRetryDelay" from="sci-get-property(&apos;sfg&apos;, &apos;STS.FA.SecInRetryDelay&apos;)"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/ServiceName" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.ServiceName&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/Trace" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.Trace&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/FileDesc" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.FileDesc&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/FileInfo" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.FileInfo&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/NonRepudiation" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.NonRepudiation&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/Sign" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, string(SFG_STS_Outbound/Group), &apos;.E2ESigning&apos;))"></assign> 
+              <assign to="SFG_SWIFTNet_Client_FA/Version6" from="sci-get-property(&apos;sfg&apos;, &apos;STS.FA.UseVersion6&apos;)"></assign> 
+                       </output> 
+                       <input message="inmsg"> 
+                               <assign to="." from="*"></assign> 
+                       </input> 
+                       </operation> 
+  
+         <!-- <operation name="MultiAssign: Assign STS FA properties"> 
+            <participant name="SFG_MULTI_ASSIGN_SG"/> 
+            <output message="MultiAssignInputMessage"> 
+              <assign to="name.1">OutboundLocation</assign> 
+              <assign to="name.10">RequestType</assign> 
+              <assign to="name.11">TransferDescr</assign> 
+              <assign to="name.12">TransferInfo</assign> 
+              <assign to="name.13">RequestReference</assign> 
+              <assign to="name.14">DeliveryNotification</assign> 
+              <assign to="name.15">DeliveryNotificationDN</assign> 
+              <assign to="name.16">DeliveryNotificationRT</assign> 
+              <assign to="name.17">SnF</assign> 
+              <assign to="name.2">NumOfRetries</assign> 
+              <assign to="name.3">RequestorDN</assign> 
+              <assign to="name.4">ResponderDN</assign> 
+              <assign to="name.5">SecInRetryDelay</assign> 
+              <assign to="name.6">ServiceName</assign> 
+              <assign to="name.7">Trace</assign> 
+              <assign to="name.8">FileDesc</assign> 
+              <assign to="name.9">FileInfo</assign> 
+              <assign to="value.1" from="sci-get-property(&apos;sfg&apos;, &apos;STS.FA.OutboundDataFileLocation&apos;)"></assign> 
+              <assign to="value.10" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.RequestType&apos;))"></assign> 
+              <assign to="value.11" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.TransferDescr&apos;))"></assign> 
+              <assign to="value.12" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.TransferInfo&apos;))"></assign> 
+              <assign to="value.13" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.RequestReference&apos;))"></assign> 
+              <assign to="value.14" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.DeliveryNotification&apos;))"></assign> 
+              <assign to="value.15" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.DeliveryNotificationDN&apos;))"></assign> 
+              <assign to="value.16" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.DeliveryNotificationRT&apos;))"></assign> 
+              <assign to="value.17" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.SnF&apos;))"></assign> 
+              <assign to="value.2" from="sci-get-property(&apos;sfg&apos;, &apos;STS.FA.NumOfRetries&apos;)"></assign> 
+              <assign to="value.3" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.RequestorDN&apos;))"></assign> 
+              <assign to="value.4" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.ResponderDN&apos;))"></assign> 
+              <assign to="value.5" from="sci-get-property(&apos;sfg&apos;, &apos;STS.FA.SecInRetryDelay&apos;)"></assign> 
+              <assign to="value.6" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.ServiceName&apos;))"></assign> 
+              <assign to="value.7" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.Trace&apos;))"></assign> 
+              <assign to="value.8" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.FileDesc&apos;))"></assign> 
+              <assign to="value.9" from="sci-get-property(&apos;sfg&apos;, concat(&apos;STS.FA.&apos;, SFG_STS_Outbound/Group/text(), &apos;.FileInfo&apos;))"></assign> 
+              <assign to="." from="*"></assign> 
+            </output> 
+            <input message="inmsg"> 
+              <assign to="SFG_SWIFTNet_Client_FA" from="*"></assign> 
+            </input> 
+          </operation>--> 
+  
+          <onFault> 
+            <sequence name="STS02"> 
+              <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">STS02</assign> 
+              <operation name="Inline Invoke : Throw Error"> 
+                <participant name="SFG_THROW_ERROR_INLINE_SG"/> 
+                <output message="InlineInvokeBPTypeInputMessage"> 
+                  <assign to="." from="*"></assign> 
+                </output> 
+                <input message="inmsg"> 
+                  <assign to="." from="*"></assign> 
+                </input> 
+              </operation> 
+  
+            </sequence> 
+          </onFault> 
+        </sequence> 
+      </sequence> 
+      <sequence name="SubFlowC: Send to SWIFTNet FA"> 
+        <sequence name="Invoke SWIFTNet Client FA"> 
+          <operation name="Invoke SFG_SWIFT"> 
+            <participant name="FB_INVOKE_SUBPROCESS"/> 
+            <output message="InvokeSubProcessServiceTypeInputMessage"> 
+              <assign to="INVOKE_MODE">INLINE</assign> 
+              <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign> 
+              <assign to="WFD_NAME">SFG_SWIFTNet_Client_FA</assign> 
+              <assign to="." from="*"></assign> 
+            </output> 
+            <input message="inmsg"> 
+              <assign to="." from="*"></assign> 
+            </input> 
+          </operation> 
+  
+          <operation name="Release Service"> 
+            <participant name="FB_RELEASE"/> 
+            <output message="ReleaseServiceTypeInputMessage"> 
+              <assign to="TARGET">SFG_STS_Outbound</assign> 
+              <assign to="." from="*"></assign> 
+            </output> 
+            <input message="inmsg"> 
+              <assign to="." from="*"></assign> 
+            </input> 
+          </operation> 
+  
+          <onFault> 
+            <sequence name="STS03"> 
+              <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">STS03</assign> 
+              <operation name="Inline Invoke : Throw Error"> 
+                <participant name="SFG_THROW_ERROR_INLINE_SG"/> 
+                <output message="InlineInvokeBPTypeInputMessage"> 
+                  <assign to="." from="*"></assign> 
+                </output> 
+                <input message="inmsg"> 
+                  <assign to="." from="*"></assign> 
+                </input> 
+              </operation> 
+  
+            </sequence> 
+          </onFault> 
+        </sequence> 
+      </sequence> 
+      <onFault> 
+        <sequence name="STS01"> 
+          <assign name="Assign" to="SFG_ThrowError/ErrorCode" append="true">STS01</assign> 
+          <operation name="Inline Invoke : Throw Error"> 
+            <participant name="SFG_THROW_ERROR_INLINE_SG"/> 
+            <output message="InlineInvokeBPTypeInputMessage"> 
+              <assign to="." from="*"></assign> 
+            </output> 
+            <input message="inmsg"> 
+              <assign to="." from="*"></assign> 
+            </input> 
+          </operation> 
+  
+        </sequence> 
+      </onFault> 
+    </sequence> 
+    <onFault> 
+      <sequence name="HandleError"> 
+        <!--<operation name="Invoke Sub-Process: STS Handle Error"> 
+          <participant name="FB_INVOKE_SUBPROCESS"/> 
+          <output message="InvokeSubProcessServiceTypeInputMessage"> 
+            <assign to="INVOKE_MODE">INLINE</assign> 
+            <assign to="NOTIFY_PARENT_ON_ERROR">NONE</assign> 
+            <assign to="WFD_NAME">SFG_STS_Handle_Error</assign> 
+            <assign to="." from="*"></assign> 
+          </output> 
+          <input message="inmsg"> 
+            <assign to="." from="*"></assign> 
+          </input> 
+        </operation>--> 
+  
+        <operation name="Business Process Exception"> 
+          <participant name="FB_BPEXCEPTION"/> 
+          <output message="BPExceptionServiceTypeInputMessage"> 
+            <assign to="exceptionCode">Marking process as halted</assign> 
+            <assign to="." from="*"></assign> 
+          </output> 
+          <input message="inmsg"> 
+            <assign to="." from="*"></assign> 
+          </input> 
+        </operation> 
+  
+        <operation name="Release Service"> 
+          <participant name="FB_RELEASE"/> 
+          <output message="ReleaseServiceTypeInputMessage"> 
+            <assign to="TARGET">SFG_STS_Outbound</assign> 
+            <assign to="." from="*"></assign> 
+          </output> 
+          <input message="inmsg"> 
+            <assign to="." from="*"></assign> 
+          </input> 
+        </operation> 
+  
+      </sequence> 
+    </onFault> 
+  </sequence> 
+</process>

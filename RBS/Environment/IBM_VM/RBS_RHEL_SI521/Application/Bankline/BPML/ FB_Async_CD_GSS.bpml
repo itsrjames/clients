@@ -1,0 +1,47 @@
+<process name="FB_Async_CD_GSS">
+  <sequence name="GSS Async CD">
+    <assign name="Assign" to="FB_Async_CD/Snode">GSS</assign>
+    <operation name="Invoke FB_Async_CD_Handler (inline)">
+      <participant name="FB_INVOKE_SUBPROCESS"/>
+      <output message="InvokeSubProcessServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="INVOKE_MODE">INLINE</assign>
+        <assign to="WFD_NAME">FB_Async_CD_Handler</assign>
+        <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <assign name="Assign" to="FB_Async_CD/Snode">DLK</assign>
+    <operation name="Invoke FB_Async_CD_Handler (inline)">
+      <participant name="FB_INVOKE_SUBPROCESS"/>
+      <output message="InvokeSubProcessServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="INVOKE_MODE">INLINE</assign>
+        <assign to="WFD_NAME">FB_Async_CD_Handler</assign>
+        <assign to="NOTIFY_PARENT_ON_ERROR">ALL</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <onFault>
+      <sequence name="FBK010">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK010</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

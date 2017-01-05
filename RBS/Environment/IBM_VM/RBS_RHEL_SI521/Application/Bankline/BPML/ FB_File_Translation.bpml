@@ -1,0 +1,60 @@
+<process name="FB_File_Translation">
+  <rule name="RejectionFSN">
+    <condition>string(GPLFileType)=&apos;FR&apos;</condition>
+  </rule>
+
+  <sequence name="Main">
+    <sequence name="Tx">
+      <operation name="Translation">
+        <participant name="FB_TRANSLATION"/>
+        <output message="TranslationTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="useStreams">YES</assign>
+          <assign to="validate_input" from="string(Validate)"></assign>
+          <assign to="validate_output" from="string(Validate)"></assign>
+          <assign to="output_report_to_process_data">true</assign>
+          <assign to="map_name" from="string(MapName)"></assign>
+          <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+      <assign name="Assign" to="RouteOnErrorStatus">false</assign>
+      <operation name="FGRouteEvent: FB_8012">
+        <participant name="FileGatewayRouteEventService"/>
+        <output message="FileGatewayRouteEventServiceTypeInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="EventCode">FB_8012</assign>
+          <assign to="ExceptionLevel">Normal</assign>
+          <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+          <assign to="EventAttributes/MapName" from="string(MapName)" append="true"></assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+
+    </sequence>
+    <onFault>
+      <sequence name="FB_8062">
+        <assign name="Assign" to="RouteOnErrorStatus">false</assign>
+        <operation name="FGRouteEvent: FB_8063">
+          <participant name="FileGatewayRouteEventService"/>
+          <output message="FileGatewayRouteEventServiceTypeInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FB_8063</assign>
+            <assign to="ExceptionLevel">Abnormal</assign>
+            <assign to="WF_RUNTIME_OVERRIDE_PERSISTENCE_LEVEL">PERSISTENCE_FULL</assign>
+            <assign to="EventAttributes/MapName" from="string(MapName)" append="true"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

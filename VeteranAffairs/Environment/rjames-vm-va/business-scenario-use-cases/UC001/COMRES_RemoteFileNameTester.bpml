@@ -1,0 +1,21 @@
+<process name="COMRES_RemoteFileNameTester">
+	<sequence name="MainSequence">
+		<assign to="CDWTO/ID">AITC_MFRAME_TEST_01</assign>
+		<assign to="ConsumerCode">AITC-MFRAME-TEST-01</assign>
+		<assign to="DestinationMessageName">va_uc001.txt</assign>
+        <operation name="This: Create RemoteFilename">
+          <participant name="This"/>
+          <output message="assignRequest">
+            <assign to="." from="*"></assign>
+            <assign to="to">CDWTO/RemoteFilename</assign>
+            <assign to="from" from="sci-get-property(&apos;fbcdwto&apos;, concat(CDWTO/ID, &apos;.PUSH.RemoteFilenameXpath&apos;))"></assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>		
+		<onFault>
+			<assign to="CatchError">CatchError</assign>
+		</onFault>
+	</sequence>
+</process>

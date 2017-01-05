@@ -1,0 +1,31 @@
+<process name="VA_UC001">
+<!-- 
+Customer	:	Veterans Affairs
+Asset   	:	VA_UC001
+Type		:	Business Process
+Developer	:	Robert James rjames@comresource.com
+Use Case	:	UC001
+Function	:	Custom Protocol File System Write Business Process
+ -->
+	<rule name="SendTriggerFile">
+		<condition>string(SendTriggerFile) = 'Yes'</condition>
+	</rule> 
+	<sequence name="MainSequence">
+		<operation name="File System Adapter">
+			<participant name="VA_UC001_FSA"/>
+			<output message="FileSystemInputMessage">
+				<assign to="Action">FS_EXTRACT</assign>
+				<assign to="assignFilename">true</assign>
+				<assign to="extractionFolder" from="/ProcessData/UNCDirectory/text()"/>
+				<assign to="assignedFilename" from="/ProcessData/DestinationMessageName/text()"/>
+				<assign to="." from="*"/>
+			</output>
+			<input message="inmsg">
+				<assign to="." from="*"/>
+			</input>
+		</operation>	
+	<onFault>
+		<assign to="OnFaultDoSomething">OnFaultDoSomething</assign>
+	</onFault>
+	</sequence>
+</process>

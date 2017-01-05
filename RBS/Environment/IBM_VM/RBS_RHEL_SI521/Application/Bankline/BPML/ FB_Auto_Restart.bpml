@@ -1,0 +1,183 @@
+<process name="FB_Auto_Restart">
+  <rule name="IsTokensLeft">
+    <condition>string-length(FB_Auto_Restart/Sequence)&gt;0</condition>
+  </rule>
+
+  <rule name="DoRestartCmd">
+    <condition>number(FB_Auto_Restart/ProcessCount)&gt;0 
+and number(FB_Auto_Restart/ProcessCount)&lt; number(sci-get-property(&apos;fbglobal&apos;, &apos;AR.ProcessLimit&apos;))</condition>
+  </rule>
+
+  <rule name="ProcessLimitExceeded">
+    <condition>number(FB_Auto_Restart/ProcessCount)&gt;= number(sci-get-property(&apos;fbglobal&apos;, &apos;AR.ProcessLimit&apos;))</condition>
+  </rule>
+
+  <rule name="NoRestartCmd">
+    <condition>number(FB_Auto_Restart/ProcessCount)&lt;=0</condition>
+  </rule>
+
+  <sequence name="AutoRestart">
+    <assign name="Assign" to="FB_Auto_Restart/Sequence" from="concat(sci-get-property(&apos;fbglobal&apos;, &apos;AR.ExcecuteSeq&apos;), &apos;;&apos;)"></assign>
+    <sequence name="LoopStart">
+      <choice name="IsTokens?">
+        <select>
+          <case ref="IsTokensLeft" activity="RestartProcesses"/>
+        </select>
+
+        <sequence name="RestartProcesses">
+          <assign name="Assign" to="FB_Auto_Restart/Current" from="substring-before(FB_Auto_Restart/Sequence, &apos;;&apos;)"></assign>
+          <assign name="Assign" to="FB_Auto_Restart/Process" from="sci-get-property(&apos;fbglobal&apos;, concat(&apos;AR.Process.&apos;, FB_Auto_Restart/Current))"></assign>
+          <sequence name="RestartSeq">
+            <operation name="Lock">
+              <participant name="FB_LOCK"/>
+              <output message="LockServiceTypeInputMessage">
+                <assign to="." from="*"></assign>
+                <assign to="ACTION">LOCK</assign>
+                <assign to="CLEAR_ON_START_UP">TRUE</assign>
+                <assign to="DURATION" from="sci-get-property(&apos;fbglobal&apos;, &apos;AR.Lock.Duration&apos;)"></assign>
+                <assign to="LOCK_KEY" from="concat(&apos;FB_Auto_Restart-&apos;, FB_Auto_Restart/Process)"></assign>
+                <assign to="USER">FBSystem</assign>
+              </output>
+              <input message="inmsg">
+                <assign to="." from="*"></assign>
+              </input>
+            </operation>
+
+            <sequence name="LockSeq">
+              <operation name="JDBC: Get HALTED count">
+                <participant name="FB_LWJDBC"/>
+                <output message="LightweightJDBCAdapterTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="param1" from="string(FB_Auto_Restart/Process)"></assign>
+                  <assign to="paramtype1">String</assign>
+                  <assign to="sql">select COUNT(DISTINCT WORKFLOW_ID) as PROCESSCOUNT from WORKFLOW_CONTEXT, WFD, ARCHIVE_INFO AI  WHERE AI.WF_ID = WORKFLOW_CONTEXT.WORKFLOW_ID AND AI.GROUP_ID = 1 AND AI.ARCHIVE_FLAG = -1 AND WORKFLOW_CONTEXT.WFD_ID = WFD.WFD_ID AND WORKFLOW_CONTEXT.WFD_VERSION = WFD.WFD_VERSION AND WFD.NAME =? AND WORKFLOW_CONTEXT.BASIC_STATUS&gt;0</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="FB_Auto_Restart/ProcessCount" from="string(DocToDOM(PrimaryDocument, &apos;false&apos;)//PROCESSCOUNT)"></assign>
+                </input>
+              </operation>
+
+              <choice name="Process Count?">
+                <select>
+                  <case ref="DoRestartCmd" activity="DoRestart"/>
+                  <case ref="ProcessLimitExceeded" activity="Process Limit Exceeded"/>
+                </select>
+
+                <sequence name="DoRestart">
+                  <operation name="Command Line : Restart halted processes">
+                    <participant name="CommandLineAdapter2"/>
+                    <output message="CmdLineInputMessage">
+                      <assign to="cmdLine" from="concat(sci-get-property(&apos;fbglobal&apos;, &apos;AR.RestartCmd&apos;),&apos; -r N  &apos; , FB_Auto_Restart/Process/text())"></assign>
+                      <assign to="setSoTimeout" from="sci-get-property(&apos;fbglobal&apos;, &apos;AR.SocketTimeout&apos;)"></assign>
+                      <assign to="." from="*"></assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                  <onFault>
+                    <sequence name="Process FBK065">
+                      <operation name="FileBrokerEvent">
+                        <participant name="FB_FILEBROKER_EVENT"/>
+                        <output message="FileBrokerEventInputMessage">
+                          <assign to="." from="*"></assign>
+                          <assign to="EventCode">FBK065</assign>
+                          <assign to="Info" from="concat(&apos;Process=&apos;,FB_Auto_Restart/Process)"></assign>
+                        </output>
+                        <input message="inmsg">
+                          <assign to="." from="*"></assign>
+                        </input>
+                      </operation>
+
+                    </sequence>
+                  </onFault>
+                </sequence>
+                <sequence name="Process Limit Exceeded">
+                  <operation name="FileBrokerEvent - FBK067">
+                    <participant name="FB_FILEBROKER_EVENT"/>
+                    <output message="FileBrokerEventInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="EventCode">FBK067</assign>
+                      <assign to="Info" from="concat(&apos;Process=&apos;,FB_Auto_Restart/Process)"></assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </choice>
+              <operation name="Unlock">
+                <participant name="FB_LOCK"/>
+                <output message="LockServiceTypeInputMessage">
+                  <assign to="." from="*"></assign>
+                  <assign to="ACTION">UNLOCK</assign>
+                  <assign to="CLEAR_ON_START_UP">TRUE</assign>
+                  <assign to="LOCK_KEY" from="concat(&apos;FB_Auto_Restart-&apos;, FB_Auto_Restart/Process)"></assign>
+                  <assign to="USER">FBSystem</assign>
+                </output>
+                <input message="inmsg">
+                  <assign to="." from="*"></assign>
+                </input>
+              </operation>
+
+              <onFault>
+                <sequence name="ReleaseLock">
+                  <operation name="Unlock">
+                    <participant name="FB_LOCK"/>
+                    <output message="LockServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="ACTION">UNLOCK</assign>
+                      <assign to="CLEAR_ON_START_UP">TRUE</assign>
+                      <assign to="LOCK_KEY" from="concat(&apos;FB_Auto_Restart-&apos;, FB_Auto_Restart/Process)"></assign>
+                      <assign to="USER">FBSystem</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                  <operation name="Business Process Exception">
+                    <participant name="FB_BPEXCEPTION"/>
+                    <output message="BPExceptionServiceTypeInputMessage">
+                      <assign to="." from="*"></assign>
+                      <assign to="exceptionCode">Continuing error state after releasing lock</assign>
+                    </output>
+                    <input message="inmsg">
+                      <assign to="." from="*"></assign>
+                    </input>
+                  </operation>
+
+                </sequence>
+              </onFault>
+            </sequence>
+            <onFault>
+              <sequence name="NoAction">
+                <assign name="Assign" to="ExitWithoutHalting">true</assign>
+              </sequence>
+            </onFault>
+          </sequence>
+          <assign name="Assign" to="FB_Auto_Restart/Sequence" from="substring-after(FB_Auto_Restart/Sequence,concat(FB_Auto_Restart/Current, &apos;;&apos;))"></assign>
+          <repeat name="Return to LoopStart" ref="LoopStart"/>
+
+        </sequence>
+      </choice>
+    </sequence>
+    <onFault>
+      <sequence name="FBK065">
+        <operation name="FileBrokerEvent">
+          <participant name="FB_FILEBROKER_EVENT"/>
+          <output message="FileBrokerEventInputMessage">
+            <assign to="." from="*"></assign>
+            <assign to="EventCode">FBK065</assign>
+          </output>
+          <input message="inmsg">
+            <assign to="." from="*"></assign>
+          </input>
+        </operation>
+
+      </sequence>
+    </onFault>
+  </sequence>
+</process>

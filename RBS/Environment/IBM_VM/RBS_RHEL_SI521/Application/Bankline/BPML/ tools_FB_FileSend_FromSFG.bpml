@@ -1,0 +1,80 @@
+<process name="tools_FB_FileSend_FromSFG">
+  <sequence name="Sequence Start">
+    <operation name="Business Process Metadata">
+      <participant name="FB_BPMETADATA"/>
+      <output message="BPMetaDataServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="tools_FB_FileSend/WFID" from="BPDATA/WORKFLOW_ID/text()" append="true"></assign>
+      </input>
+    </operation>
+
+    <operation name="Get Document Information Service">
+      <participant name="FB_GETDOCINFO"/>
+      <output message="GetDocumentInfoServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="tools_FB_FileSend/DocID" from="DocumentId/text()"></assign>
+        <assign to="tools_FB_FileSend/Filename" from="DocumentName/text()"></assign>
+      </input>
+    </operation>
+
+    <operation name="XSLT Service">
+      <participant name="FB_XSLT"/>
+      <output message="XSLTServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="input_pd_xpath">/ProcessData/tools_FB_FileSend</assign>
+        <assign to="xml_input_from">ProcData</assign>
+        <assign to="xml_input_validation">NO</assign>
+        <assign to="xslt_name">tools_FB_CreateMQMDMessage</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+        <assign to="tools_FB_FileSend/MDMessage" from="PrimaryDocument/@SCIObjectID"></assign>
+      </input>
+    </operation>
+
+    <operation name="WebSphere MQ Adapter">
+      <participant name="tools_FB_GPL_PutMetaFromSFGtoMQ"/>
+      <output message="WebsphereMQInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="snd_maxMsgSize">10000000</assign>
+        <assign to="snd_MQMD_correlId" from="tools_FB_FileSend/WFID/text()"></assign>
+        <assign to="snd_MQMD_msgType">DATAGRAM</assign>
+        <assign to="snd_noSegSplit">Yes</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="Lightweight JDBC Adapter">
+      <participant name="FB_LWJDBC"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1" from="MQ/sentCorrelationId/text()"></assign>
+        <assign to="param2">SFG</assign>
+        <assign to="param3">FB</assign>
+        <assign to="param4" from="tools_FB_FileSend/Filename/text()"></assign>
+        <assign to="param5" from="number(15 div 1440)"></assign>
+        <assign to="param6">0</assign>
+        <assign to="param7" from="tools_FB_FileSend/DocID/text()"></assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="paramtype2">String</assign>
+        <assign to="paramtype3">String</assign>
+        <assign to="paramtype4">String</assign>
+        <assign to="paramtype5">Double</assign>
+        <assign to="paramtype6">Integer</assign>
+        <assign to="paramtype7">String</assign>
+        <assign to="query_type">INSERT</assign>
+        <assign to="sql">INSERT INTO tools_FB_MQ_FILE_TRANSFER (CORRELATION_ID, PRODUCER, CONSUMER, FILENAME, EXPIRES, STATUS, DOC_ID, CREATED, LAST_MODIFIED) values (?,?,?,?,SYSDATE + ?,?,?,SYSDATE,SYSDATE)</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+  </sequence>
+</process>
